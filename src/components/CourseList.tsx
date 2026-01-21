@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Search, BookOpen, Tag } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, BookOpen, Tag, Filter } from 'lucide-react';
 import type { Course, CustomTag } from '../types/Course';
 import { CourseStatus, CourseTag, TAG_LABELS, TAG_COLOR_PALETTE } from '../types/Course';
 import { CourseCard } from './CourseCard';
@@ -17,7 +17,7 @@ interface CourseListProps {
   compact?: boolean;
 }
 
-export const CourseList: React.FC<CourseListProps> = ({
+export const CourseList = ({
   courses,
   title,
   status,
@@ -28,15 +28,10 @@ export const CourseList: React.FC<CourseListProps> = ({
   showActions = true,
   conflicts = [],
   compact = false
-}) => {
+}: CourseListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'instructor'>('code');
   const [filterTag, setFilterTag] = useState<CourseTag | string | 'all' | 'untagged'>('all');
-
-  // Özel etiket bilgisini al
-  const getCustomTagInfo = (tagId: string) => {
-    return customTags.find(t => t.id === tagId);
-  };
 
   const getCustomTagColor = (colorId: string) => {
     return TAG_COLOR_PALETTE.find(c => c.id === colorId);

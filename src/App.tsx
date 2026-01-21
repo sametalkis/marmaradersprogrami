@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Download, FileText, AlertTriangle, Wand2, BookOpen, CheckCircle, List, Upload, Tag } from 'lucide-react';
 import type { Course, ExcelData, ScheduleConflict, CustomTag } from './types/Course';
 import { CourseStatus, CourseTag } from './types/Course';

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Clock, User, MapPin, Plus, Minus, AlertTriangle, Tag, ChevronDown } from 'lucide-react';
-import type { Course, CustomTag } from '../types/Course';
+import type { Course, CustomTag, ParsedSchedule } from '../types/Course';
 import { CourseTag, TAG_COLORS, TAG_LABELS, TAG_COLOR_PALETTE } from '../types/Course';
 import { parseSchedule } from '../utils/excelParser';
 
@@ -16,7 +16,7 @@ interface CourseCardProps {
   compact?: boolean;
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({
+export const CourseCard = ({
   course,
   onToggleSelect,
   onMoveToEligible,
@@ -26,10 +26,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   hasConflict = false,
   conflictMessage,
   compact = false
-}) => {
+}: CourseCardProps) => {
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const schedules = course.schedules || [parseSchedule(course.dayTimeLocation)].filter(Boolean);
+  const schedules: ParsedSchedule[] = (course.schedules || [parseSchedule(course.dayTimeLocation)]).filter((s): s is ParsedSchedule => s !== null);
   const firstSchedule = schedules[0];
 
   // Etiket bilgisini al (sabit veya özel)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, X, Tag, Palette, Smile } from 'lucide-react';
 import type { CustomTag } from '../types/Course';
 import { TAG_COLOR_PALETTE, TAG_EMOJI_PALETTE } from '../types/Course';
@@ -10,17 +10,17 @@ interface TagManagerProps {
   onUpdateTag: (tag: CustomTag) => void;
 }
 
-export const TagManager: React.FC<TagManagerProps> = ({
+export const TagManager = ({
   customTags,
   onAddTag,
   onDeleteTag,
   onUpdateTag
-}) => {
+}: TagManagerProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newTagName, setNewTagName] = useState('');
-  const [selectedColor, setSelectedColor] = useState(TAG_COLOR_PALETTE[0].id);
-  const [selectedEmoji, setSelectedEmoji] = useState(TAG_EMOJI_PALETTE[0]);
+  const [selectedColor, setSelectedColor] = useState<string>(TAG_COLOR_PALETTE[0].id);
+  const [selectedEmoji, setSelectedEmoji] = useState<string>(TAG_EMOJI_PALETTE[0]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 

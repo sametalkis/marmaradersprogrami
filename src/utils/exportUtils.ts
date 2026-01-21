@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
-import type { Course } from '../types/Course';
-import { parseSchedule, parseAllSchedules } from './excelParser';
+import type { Course, ParsedSchedule } from '../types/Course';
+import { parseAllSchedules } from './excelParser';
 import { DAYS_OF_WEEK } from '../types/Course';
 
 // Renk paleti
@@ -127,15 +127,15 @@ export const exportToPDF = async (_elementId: string, filename: string = 'ders-p
     pdf.text(dayName.substring(0, 3), margin + 2, currentY + rowHeight / 2 + 1);
     
     // Bu günün dersleri
-    const daySchedules = selectedCourses.flatMap((course: Course) => {
+    const daySchedules: { course: Course; schedule: ParsedSchedule }[] = selectedCourses.flatMap((course: Course) => {
       const schedules = course.schedules || parseAllSchedules(course.dayTimeLocation);
       return schedules
-        .filter(s => s?.day === day)
-        .map(s => ({ course, schedule: s! }));
+        .filter((s): s is ParsedSchedule => s !== null && s.day === day)
+        .map(s => ({ course, schedule: s }));
     });
     
     // Dersleri çiz
-    daySchedules.forEach(({ course, schedule }) => {
+    daySchedules.forEach(({ course, schedule }: { course: Course; schedule: ParsedSchedule }) => {
       const startHour = parseInt(schedule.startTime.split(':')[0]);
       const startMin = parseInt(schedule.startTime.split(':')[1]);
       const endHour = parseInt(schedule.endTime.split(':')[0]);

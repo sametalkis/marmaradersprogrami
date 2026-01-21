@@ -48,12 +48,13 @@ export const TAG_EMOJI_PALETTE = [
   '📝', '📌', '🔖', '🏷️', '🎨', '🎭', '🎵', '🎬', '💻', '🔬'
 ] as const;
 
-export enum CourseTag {
-  MANDATORY = 'mandatory',    // Zorunlu
-  ELECTIVE = 'elective',     // Seçmeli
-  IMPORTANT = 'important',   // Önemli
-  OPTIONAL = 'optional'      // İsteğe bağlı
-}
+export const CourseTag = {
+  MANDATORY: 'mandatory',    // Zorunlu
+  ELECTIVE: 'elective',     // Seçmeli
+  IMPORTANT: 'important',   // Önemli
+  OPTIONAL: 'optional'      // İsteğe bağlı
+} as const;
+export type CourseTag = typeof CourseTag[keyof typeof CourseTag];
 
 export const TAG_COLORS = {
   [CourseTag.MANDATORY]: 'bg-red-100 text-red-800 border-red-200',
@@ -82,11 +83,12 @@ export interface ScheduleConflict {
   conflictReason: string;
 }
 
-export enum CourseStatus {
-  ALL = 'all',
-  ELIGIBLE = 'eligible', 
-  SELECTED = 'selected'
-}
+export const CourseStatus = {
+  ALL: 'all',
+  ELIGIBLE: 'eligible', 
+  SELECTED: 'selected'
+} as const;
+export type CourseStatus = typeof CourseStatus[keyof typeof CourseStatus];
 
 export interface ExcelData {
   courses: Course[];

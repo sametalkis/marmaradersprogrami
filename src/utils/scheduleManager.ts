@@ -1,4 +1,4 @@
-import type { Course, ScheduleConflict, ParsedSchedule } from '../types/Course';
+import type { Course, ScheduleConflict } from '../types/Course';
 import { parseSchedule, checkTimeConflict } from './excelParser';
 
 export const findScheduleConflicts = (courses: Course[]): ScheduleConflict[] => {
