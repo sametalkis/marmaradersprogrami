@@ -1,173 +1,233 @@
-# Marmara Üniversitesi Ders Programı Uygulaması
+<div align="center">
+    <img src="public/favicon.png" alt="Marmara Ders Programı Logo" height="128" width="128"/>
+    <h1>
+        <b>Marmara Ders Programı</b>
+    </h1>
+    Marmara Üniversitesi öğrencileri için sunulan dersler Excel listesinden kişisel, çakışmasız haftalık ders programı oluşturan web uygulaması.
+    <br>
+    Tüm veriler tarayıcınızda (localStorage) saklanır; sunucu ve telemetri bağlantısı bulunmaz.
+</div>
 
-Marmara Üniversitesi öğrencileri için sunulan dersler Excel dosyasından kişisel ders programı oluşturma uygulaması.
+<br>
+
+<div align="center">
+    <a href="https://github.com/sametalkis/marmaradersprogrami">
+        <img alt="Depo" src="https://img.shields.io/badge/GitHub-sametalkis%2Fmarmaradersprogrami-181717?style=for-the-badge&logo=github&logoColor=white"/>
+    </a>
+</div>
+
+<br>
+
+<div align="center">
+    <a href="https://github.com/facebook/react"><img alt="React 19" src="https://img.shields.io/badge/React-19.1-61DAFB?style=flat-square&logo=react&logoColor=black"/></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white"/></a>
+    <a href="https://vitejs.dev/"><img alt="Vite" src="https://img.shields.io/badge/Vite-7.1-646CFF?style=flat-square&logo=vite&logoColor=white"/></a>
+    <a href="https://tailwindcss.com/"><img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-3.4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=white"/></a>
+    <a href="https://dndkit.com/"><img alt="dnd-kit" src="https://img.shields.io/badge/dnd--kit-6.x-C9A0FF?style=flat-square"/></a>
+    <a href="https://sheetjs.com/"><img alt="SheetJS" src="https://img.shields.io/badge/SheetJS-xlsx-16A34A?style=flat-square"/></a>
+    <a href="https://rawgit.com/MrRio/jsPDF/master/"><img alt="jsPDF" src="https://img.shields.io/badge/jsPDF-3.0-E2352C?style=flat-square"/></a>
+    <a href="https://lucide.dev/"><img alt="Lucide" src="https://img.shields.io/badge/Lucide-Icons-F56565?style=flat-square"/></a>
+</div>
+
+<br>
+
+## Ekran Görüntüleri
+
+<p align="center">
+  <img src="docs/screenshots/desktop-light.png" alt="Masaüstü - Aydınlık Tema" width="700"/>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/desktop-dark.png" alt="Masaüstü - OLED Karanlık Tema" width="700"/>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/mobile.png" alt="Mobil Görünüm" width="280"/>
+</p>
+
+<br>
 
 ## Özellikler
 
-### 📚 Excel Dosyası Yükleme
-- Drag & Drop veya file picker ile Excel yükleme
-- Otomatik veri parse etme
-- Hata kontrolü ve bilgilendirme
+### 📚 Excel ile Ders Yükleme
+- Sürükle-bırak veya dosya seçici ile `.xlsx` / `.xls` yükleme
+- Otomatik parse, doğrulama ve hata bildirimi
+- Marmara Üniversitesi'nin resmi "Sunulan Dersler" listesi formatını destekler
 
-### 📖 Üç Ana Bölüm
-1. **Tüm Sunulan Dersler** - Excel'den gelen tüm dersler
-2. **Almaya Uygun Dersler** - Seçilmeye hazır dersler
-3. **Seçilen Dersler** - Final ders programınız
+### 📖 Ders Yönetimi
+- **Tüm Dersler / Uygun / Seçilen** sekmeleri ile akıllı filtreleme
+- **Toplu Ekle** (Akıllı Yapıştır): Ders kodlarını metin olarak yapıştır, sistem tüm section'ları otomatik eşleştirsin
+- Özel etiketler (Zorunlu, Seçmeli, Önemli, İsteğe Bağlı) ve etiket yöneticisi
+- Sürükle-bırak ile ders listesi sıralama (dnd-kit)
 
 ### 🕒 Akıllı Çakışma Kontrolü
-- Otomatik saat çakışması tespiti
-- Görsel uyarılar
-- Çakışan derslerin listesi
+- Seçim anında otomatik saat çakışması tespiti
+- Detaylı çakışma gerekçesi ("Pazartesi günü saat çakışması: 09:30-12:20 ile 09:30-12:20")
+- "Yine de Ekle" ile bilinçli çakışma izni
 
 ### 📅 Program Görselleştirme
-- Haftalık takvim görünümü
-- Renkli ders bloklarının
-- Responsive tasarım
+- Dikey ve yatay haftalık takvim görünümleri
+- 10 renkli yüksek kontrastlı ders blokları, derslik rozetleri
+- Gün bazlı mobil navigasyon
 
-### 💾 Veri Saklama
-- LocalStorage ile otomatik kayıt
-- Tarayıcı kapatılsa bile veriler korunur
-- Sıfırdan başlama seçeneği
+### 🧙 Otomatik Program Sihirbazı
+- Seçili derslerden çakışmasız program kombinasyonlarını otomatik üretir
+- Birden fazla taslak (scenario) oluşturma ve aralarında geçiş
 
-### 📄 Export Seçenekleri
-- **PDF Export** - Program takvimini PDF olarak indir
-- **Excel Export** - Seçilen dersleri Excel dosyası olarak kaydet  
-- **Metin Export** - Basit metin formatında özet
+### ⚙️ Verimlilik
+- **Geri Al / İleri Al** geçmişi (⌘Z / ⌘⇧Z)
+- **⌘K komut paleti** ile hızlı ders arama
+- **Senaryolar**: Birden fazla program taslağı yan yana
+- OLED karanlık tema dahil aydınlık/karanlık mod
 
-## Teknolojiler
+### 📄 Export
+- **PDF** — Canvas tabanlı çizim ile A4 yatay takvim (mobil dahil tüm cihazlarda tutarlı)
+- **Excel** — Seçili derslerin tablo dökümü
+- **Metin** — Ders düz metin özeti
 
-- **React 18** - Modern UI framework
-- **TypeScript** - Type-safe geliştirme
-- **Vite** - Hızlı build tool
-- **Tailwind CSS** - Utility-first CSS
-- **SheetJS** - Excel dosyası okuma
-- **jsPDF** - PDF oluşturma
-- **Lucide React** - İkonlar
+<br>
 
-## Kurulum
+## Teknoloji Yığını
+
+- **React 19:** Deklaratif UI ve fonksiyonel bileşen mimarisi
+- **TypeScript 5.8:** Tip güvenliği ve ölçeklenebilir veri modelleri
+- **Vite 7:** Hızlı HMR ve optimize edilmiş üretim derlemesi
+- **Tailwind CSS 3.4:** Utility-first stil sistemi, `dark:` varyantı ile OLED siyah tema
+- **SheetJS (xlsx):** Excel dosyası okuma ve Excel export
+- **jsPDF 3:** Canvas tabanlı PDF render ve indirme
+- **dnd-kit:** Sürükle-bırak sıralama
+- **Lucide React:** İkon seti
+- **Web Storage API:** Tüm uygulama verisi için localStorage kalıcılığı
+
+<br>
+
+## Dizin Yapısı
+
+```
+.
+├── docs/
+│   └── screenshots/                  # README ekran görüntüleri
+├── public/
+│   └── favicon.png                   # Tarayıcı sekme ikonu
+├── src/
+│   ├── components/                   # Yeniden kullanılabilir UI bileşenleri
+│   │   ├── ExcelUploader.tsx         # Sürükle-bırak Excel yükleme ekranı
+│   │   ├── CourseList.tsx            # Ders listesi + sekmeli filtreleme
+│   │   ├── CourseCard.tsx            # Tek ders kartı (+/−, etiketler)
+│   │   ├── ScheduleViewer.tsx        # Haftalık takvim (dikey/yatay)
+│   │   ├── ConfirmModal.tsx          # Çakışma onay penceresi
+│   │   ├── AutoScheduleModal.tsx     # Otomatik program sihirbazı
+│   │   ├── BatchImportModal.tsx      # Metin yapıştırarak toplu ders ekleme
+│   │   ├── CommandPalette.tsx        # ⌘K hızlı arama paleti
+│   │   ├── TagManager.tsx            # Özel etiket yönetimi
+│   │   ├── AccordionPanel.tsx        # Katlanır panel
+│   │   └── MobileBottomSheet.tsx     # Mobil alt sayfa navigasyonu
+│   ├── hooks/
+│   │   └── useLocalStorage.ts        # localStorage senkron state kancası
+│   ├── types/
+│   │   └── Course.ts                 # Ders, çakışma, senaryo tip tanımları
+│   ├── utils/
+│   │   ├── excelParser.ts            # Excel → Course[] parse katmanı
+│   │   ├── scheduleManager.ts        # Çakışma tespiti ve ders ekleme kuralları
+│   │   ├── scheduleGenerator.ts      # Otomatik çakışmasız program üretici
+│   │   ├── scheduleRenderUtils.ts    # Ders renk paleti ve takvim yardımcıları
+│   │   ├── courseCodeExtractor.ts    # Serbest metinden ders kodu çıkarma
+│   │   └── exportUtils.ts            # PDF (canvas) / Excel / Metin export
+│   ├── App.tsx                       # Uygulama kabuğu, header araç çubuğu, durum yönetimi
+│   ├── main.tsx                      # React DOM giriş noktası
+│   └── index.css / App.css           # Tailwind katmanları ve özel stiller
+├── index.html                        # PWA meta etiketleri ve tema-color
+├── tailwind.config.js                # Tailwind yapılandırması
+├── postcss.config.js                 # PostCSS (Tailwind) yapılandırması
+├── eslint.config.js                  # ESLint yapılandırması
+├── tsconfig*.json                    # TypeScript proje yapılandırması
+├── vite.config.ts                    # Vite yapılandırması
+└── package.json                      # Bağımlılıklar ve npm scriptleri
+```
+
+<br>
+
+## Kurulum ve Yerel Geliştirme
 
 ### Gereksinimler
-- Node.js 18+ 
-- npm veya yarn
+- Node.js (>= 18.0.0)
+- npm (>= 9.0.0)
 
-### Adımlar
+### 1. Depoyu Klonlayın
+```bash
+git clone https://github.com/sametalkis/marmaradersprogrami.git
+cd marmaradersprogrami
+```
 
-1. **Projeyi klonlayın**
-   ```bash
-   git clone <repository-url>
-   cd marmara-schedule-app
-   ```
+### 2. Bağımlılıkları Yükleyin
+```bash
+npm install
+```
 
-2. **Bağımlılıkları yükleyin**
-   ```bash
-   npm install
-   ```
+### 3. Geliştirme Sunucusunu Başlatın
+```bash
+npm run dev
+```
+Uygulama yerel olarak `http://localhost:5173` adresinde çalışacaktır.
 
-3. **Geliştirme server'ını başlatın**
-   ```bash
-   npm run dev
-   ```
+### 4. Tip Kontrolü ve Derleme
+```bash
+# Üretim derlemesi (TypeScript tip kontrolü dahil)
+npm run build
 
-4. **Tarayıcıda açın**
-   ```
-   http://localhost:5173
-   ```
+# Üretim derlemesini önizleme
+npm run preview
+
+# ESLint kod kontrolü
+npm run lint
+```
+
+<br>
 
 ## Kullanım
 
-### 1. Excel Dosyası Hazırlama
-Excel dosyanızda şu başlıklar olmalı:
-- **Ders Kodu** - Dersin kodu (örn: BIL101)
-- **Ders Adı** - Dersin tam adı
-- **Öğretim Elemanı** - Dersi veren hoca
-- **Gün Saat Derslik** - "Pazartesi 09:00-10:50 A-101" formatında
+### 1. Excel Dosyasını Yükleyin
+Uygulamayı açtığınızda Excel dosyanızı sürükleyip bırakın veya **Dosya Seç** ile seçin.
 
-### 2. Dosya Yükleme
-- Uygulamayı açın
-- Excel dosyasını sürükleyip bırakın veya "Dosya Seç" butonunu kullanın
-- Veriler otomatik olarak işlenecek
+### 2. Derslerinizi Seçin
+- **Tüm Dersler** sekmesinden **+** ile ders ekleyin
+- Veya **Toplu Ekle** ile ders kodlarını metin olarak yapıştırın
+- Çakışan bir ders eklerseniz uygulama sizi uyarır; **Yine de Ekle** ile devam edebilirsiniz
 
-### 3. Ders Seçimi
-- **Tüm Dersler** sekmesinden derslere bakın
-- **+** butonuna tıklayarak dersleri **Uygun Dersler**'e ekleyin
-- **Uygun Dersler**'den **+** ile **Seçilen Dersler**'e taşıyın
-- Çakışma varsa uyarı alacaksınız
+### 3. Programınızı Görüntüleyin ve Dışa Aktarın
+- Sağ panelden haftalık takviminizi görün (Dikey/Yatay)
+- **Sihirbaz** ile çakışmasız alternatif kombinasyonlar üretin
+- **PDF / Excel / Metin** butonlarıyla programınızı indirin
 
-### 4. Program Görüntüleme
-- **Program Görünümü** sekmesinde haftalık programınızı görün
-- Çakışmalar kırmızı renkle işaretlenir
-- Export butonları ile programınızı kaydedin
+<br>
 
-## Excel Dosyası Formatı
+## Veri Modeli ve Gizlilik
 
-| Ders Kodu | Ders Adı | Öğretim Elemanı | Gün Saat Derslik |
-|-----------|----------|-----------------|-------------------|
-| BIL101 | Bilgisayar Programlama | Dr. Ahmet YILMAZ | Pazartesi 09:00-10:50 A-101 |
-| MAT102 | Matematik II | Prof. Dr. Ayşe KAYA | Salı 13:00-14:50 B-205 |
+Tüm kullanıcı verileri tarayıcının yerel depolama alanında (`localStorage`) `marmara-*` anahtarları altında saklanır:
 
-## Özellik Detayları
+- `marmara-courses`: Yüklenen ders listesi ve seçim durumları
+- `marmara-custom-tags`: Kullanıcı tanımı özel etiketler
+- `marmara-scenarios`: Program taslakları (senaryolar)
+- `marmara-active-scenario`: Aktif senaryo kimliği
+- `marmara-theme`: Tema tercihi (light / dark)
 
-### Çakışma Kontrolü
-- Aynı gün ve saatteki dersler otomatik tespit edilir
-- Seçim yapmadan önce uyarı verilir
-- Çakışan dersler görsel olarak işaretlenir
+Uygulama harici sunucuya veri göndermez, telemetri içermez ve hesap gerektirmez. Sayfa yenilendiğinde veya tarayıcı kapatılsa bile veriler korunur; **Sıfırla** butonu ile her şey temizlenebilir.
 
-### Responsive Tasarım
-- Mobil cihazlarda da rahatlıkla kullanılabilir
-- Tablet ve desktop için optimize edilmiş
-- Touch-friendly arayüz
-
-### Erişilebilirlik
-- Klavye navigasyonu desteği
-- Screen reader uyumlu
-- High contrast mod desteği
-
-## Geliştirme
-
-### Projeyi Geliştirmek
-```bash
-npm run dev     # Geliştirme server'ı
-npm run build   # Production build
-npm run preview # Build önizleme
-npm run lint    # Kod kontrolü
-```
-
-### Klasör Yapısı
-```
-src/
-├── components/          # React bileşenleri
-│   ├── ExcelUploader.tsx
-│   ├── CourseList.tsx
-│   ├── CourseCard.tsx
-│   └── ScheduleViewer.tsx
-├── hooks/              # Custom hooks
-│   └── useLocalStorage.ts
-├── types/              # TypeScript türleri
-│   └── Course.ts
-├── utils/              # Utility fonksiyonları
-│   ├── excelParser.ts
-│   ├── scheduleManager.ts
-│   └── exportUtils.ts
-└── App.tsx             # Ana component
-```
+<br>
 
 ## Katkıda Bulunma
 
-1. Fork edin
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit edin (`git commit -m 'Add amazing feature'`)
-4. Push edin (`git push origin feature/amazing-feature`)
-5. Pull Request açın
+1. Depoyu forklayın (`Fork`).
+2. Özellik dalı oluşturun (`git checkout -b feature/yeni-ozellik`).
+3. Değişikliklerinizi commit edin (`git commit -m 'feat: add new feature'`).
+4. Dalınıza push yapın (`git push origin feature/yeni-ozellik`).
+5. Bir Pull Request açın.
+
+<br>
 
 ## Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır.
-
-## Destek
-
-Sorularınız için:
-- GitHub Issues
-- E-posta: [email]
+Bu proje henüz resmi bir lisansa sahip değil. Kod şu anda yalnızca kişisel kullanım ve katkı amaçlı paylaşılıyor; dağıtım koşulları için depo sahibiyle iletişime geçin.
 
 ---
 
