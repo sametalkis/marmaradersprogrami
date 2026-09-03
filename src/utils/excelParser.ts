@@ -21,6 +21,7 @@ export const parseExcelFile = async (file: File): Promise<ExcelData> => {
         const courseName = row['Ders Adı'] || row['DersAdı'] || '';
         const instructor = row['Öğretim Elemanı'] || row['ÖğretimElemanı'] || '';
         const dayTimeLocation = row['Gün Saat Derslik'] || row['GünSaatDerslik'] || '';
+        const credits = row['Kredi'];
         
         if (!courseCode || !courseName) {
           errors.push(`Satır ${index + 2}: Ders kodu veya ders adı eksik`);
@@ -37,6 +38,7 @@ export const parseExcelFile = async (file: File): Promise<ExcelData> => {
           instructor: instructor.toString().trim(),
           dayTimeLocation: dayTimeLocationStr,
           schedules: schedules,
+          credits: credits != null && credits !== '' ? Number(credits) || undefined : undefined,
           isSelected: false,
           isEligible: false  // Başlangıçta hiçbir ders uygun değil
         };
