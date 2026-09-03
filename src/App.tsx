@@ -500,7 +500,7 @@ function App() {
               Ders Programı Oluşturucu
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-base max-w-md mx-auto">
-              Excel listenizi yükleyin, çakışmasız haftalık ders programınız saniyeler içinde hazır olsun.
+              Excel listenizi yükleyin, haftalık ders programınız saniyeler içinde hazır olsun.
             </p>
           </div>
           <ExcelUploader onDataLoaded={handleDataLoaded} />
