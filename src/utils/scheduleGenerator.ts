@@ -117,9 +117,9 @@ const getSchedules = (course: Course): ParsedSchedule[] => {
 // Ders, kısıtlamaları ihlal ediyor mu? (ZORUNLU filtre - puanlamaya dahil edilmez)
 export const violatesConstraints = (course: Course, prefs: SchedulePreferences): boolean => {
   const freeDays = prefs.freeDays || [];
-  const protectLunch = !!prefs.protectLunchBreak &&
-    !!prefs.lunchBreakStart && !!prefs.lunchBreakEnd &&
-    prefs.lunchBreakEnd > prefs.lunchBreakStart;
+  const protectBlocked = !!prefs.blockTimeRange &&
+    !!prefs.blockTimeStart && !!prefs.blockTimeEnd &&
+    prefs.blockTimeEnd > prefs.blockTimeStart;
 
   for (const s of getSchedules(course)) {
     // En erken başlangıç kısıtı
@@ -132,13 +132,13 @@ export const violatesConstraints = (course: Course, prefs: SchedulePreferences):
       return true;
     }
 
-    // Öğle arası koruması: [startTime, endTime) ile [lunchBreakStart, lunchBreakEnd) kesişimi
-    if (protectLunch) {
+    // Saat koruması: [startTime, endTime) ile [blockTimeStart, blockTimeEnd) kesişimi
+    if (protectBlocked) {
       const start = timeToMinutes(s.startTime);
       const end = timeToMinutes(s.endTime);
-      const lunchStart = timeToMinutes(prefs.lunchBreakStart!);
-      const lunchEnd = timeToMinutes(prefs.lunchBreakEnd!);
-      if (start < lunchEnd && lunchStart < end) {
+      const blockedStart = timeToMinutes(prefs.blockTimeStart!);
+      const blockedEnd = timeToMinutes(prefs.blockTimeEnd!);
+      if (start < blockedEnd && blockedStart < end) {
         return true;
       }
     }
@@ -430,9 +430,9 @@ export const defaultPreferences: SchedulePreferences = {
   preferCompactSchedule: true,
   earliestStartTime: undefined,
   freeDays: [],
-  protectLunchBreak: false,
-  lunchBreakStart: '12:00',
-  lunchBreakEnd: '13:00'
+  blockTimeRange: false,
+  blockTimeStart: '12:00',
+  blockTimeEnd: '13:00'
 };
 
 // Uygun derslerden etiketli olanların sayısını hesapla (sabit etiketler)

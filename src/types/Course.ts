@@ -131,9 +131,9 @@ export interface SchedulePreferences {
   // Zorunlu kısıtlamalar (opsiyonel - tanımsızsa kısıt uygulanmaz)
   earliestStartTime?: string;  // 'HH:MM' - bu saatten önce başlayan dersler elenir (undefined = kısıt yok)
   freeDays?: string[];         // DAYS_OF_WEEK'ten Türkçe gün adları - bu günlerde ders olamaz (boş dizi = kısıt yok)
-  protectLunchBreak?: boolean; // Öğle arası saatlerinde ders başlamasın
-  lunchBreakStart?: string;    // Öğle arası başlangıcı (varsayılan '12:00')
-  lunchBreakEnd?: string;      // Öğle arası bitişi (varsayılan '13:00')
+  blockTimeRange?: boolean;    // Belirtilen saat aralığında ders olmasın
+  blockTimeStart?: string;     // Korumalı aralık başlangıcı (varsayılan '12:00')
+  blockTimeEnd?: string;       // Korumalı aralık bitişi (varsayılan '13:00')
 }
 
 export interface ScheduleSuggestion {

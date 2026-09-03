@@ -3,6 +3,7 @@ import { X, Wand2, Calendar, AlertTriangle, Check, Clock, ChevronRight, ChevronL
 import type { Course, SchedulePreferences, ScheduleSuggestion, CustomTag, ParsedSchedule, ScheduleScenario } from '../types/Course';
 import { CourseTag, TAG_LABELS, TAG_DOTS, TAG_COLOR_PALETTE, DAYS_OF_WEEK } from '../types/Course';
 import { generateScheduleSuggestions, defaultPreferences, countTaggedCourses, countUniqueCourses, countCustomTaggedCourses, countUniqueCustomTaggedCourses } from '../utils/scheduleGenerator';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { parseSchedule } from '../utils/excelParser';
 import { COURSE_COLORS, buildCourseColorMap } from '../utils/scheduleRenderUtils';
 import type { ScheduleItem } from '../utils/scheduleRenderUtils';
@@ -261,7 +262,8 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
   activeScenarioId,
   onApplyToScenario
 }) => {
-  const [preferences, setPreferences] = useState<SchedulePreferences>(defaultPreferences);
+  // Girdiler localStorage'da hatırlanır (sayfa yenilenince kaybolmaz)
+  const [preferences, setPreferences] = useLocalStorage<SchedulePreferences>('marmara-wizard-prefs', defaultPreferences);
   const [suggestions, setSuggestions] = useState<ScheduleSuggestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -324,6 +326,18 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
     });
   };
 
+  // Kullanıcın derslerindeki gerçek başlangıç saatleri (sıralı, tekrarsız)
+  const availableStartTimes = useMemo(() => {
+    const times = new Set<string>();
+    eligibleCourses.forEach(c => {
+      const schedules = c.schedules && c.schedules.length > 0
+        ? c.schedules
+        : [parseSchedule(c.dayTimeLocation)].filter(Boolean) as ParsedSchedule[];
+      schedules.forEach(s => { if (s?.startTime) times.add(s.startTime); });
+    });
+    return Array.from(times).sort();
+  }, [eligibleCourses]);
+
   const handleGenerate = () => {
     setIsGenerating(true);
     
@@ -371,7 +385,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
     setStep('config');
     setSuggestions([]);
     setCurrentIndex(0);
-    setPreferences(defaultPreferences);
+    // preferences bilerek sıfırlanmaz — kullanıcı girdileri localStorage'da hatırlanır
   };
 
   const handleClose = () => {
@@ -615,7 +629,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       </p>
                     </div>
 
-                    {/* En erken ders başlangıcı */}
+                    {/* En erken ders başlangıcı — seçenekler kullanıcının derslerinden gelir */}
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-medium text-sm text-slate-700 dark:text-zinc-200 flex-shrink-0">En erken ders başlangıcı</span>
                       <select
@@ -624,12 +638,9 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                         className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 px-2 py-1 text-sm cursor-pointer"
                       >
                         <option value="">Yok</option>
-                        <option value="08:00">08:00</option>
-                        <option value="09:00">09:00</option>
-                        <option value="10:00">10:00</option>
-                        <option value="11:00">11:00</option>
-                        <option value="12:00">12:00</option>
-                        <option value="13:00">13:00</option>
+                        {availableStartTimes.map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -657,36 +668,36 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Öğle arası koruması */}
+                    {/* Saat koruması — belirtilen aralıkta ders olmasın */}
                     <div>
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={preferences.protectLunchBreak || false}
-                          onChange={e => setPreferences(prev => ({ ...prev, protectLunchBreak: e.target.checked }))}
+                          checked={preferences.blockTimeRange || false}
+                          onChange={e => setPreferences(prev => ({ ...prev, blockTimeRange: e.target.checked }))}
                           className="w-5 h-5 rounded text-violet-600"
                         />
                         <div>
-                          <span className="font-medium text-sm text-slate-700 dark:text-zinc-200">Öğle arası koruması</span>
+                          <span className="font-medium text-sm text-slate-700 dark:text-zinc-200">Saat koruması</span>
                           <p className="text-xs text-slate-500 dark:text-zinc-400">Bu saat aralığında ders olmasın</p>
                         </div>
                       </label>
-                      <div className={`flex items-center gap-2 mt-2 pl-8 ${!(preferences.protectLunchBreak) ? 'opacity-40 pointer-events-none' : ''}`}>
+                      <div className={`flex items-center gap-2 mt-2 pl-8 ${!(preferences.blockTimeRange) ? 'opacity-40 pointer-events-none' : ''}`}>
                         <input
                           type="time"
-                          value={preferences.lunchBreakStart || '12:00'}
-                          onChange={e => setPreferences(prev => ({ ...prev, lunchBreakStart: e.target.value || '12:00' }))}
-                          disabled={!preferences.protectLunchBreak}
-                          aria-label="Öğle arası başlangıç"
+                          value={preferences.blockTimeStart || '12:00'}
+                          onChange={e => setPreferences(prev => ({ ...prev, blockTimeStart: e.target.value || '12:00' }))}
+                          disabled={!preferences.blockTimeRange}
+                          aria-label="Korumalı aralık başlangıcı"
                           className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 px-2 py-1 text-sm font-mono disabled:cursor-not-allowed"
                         />
                         <span className="text-sm text-slate-500 dark:text-zinc-400">-</span>
                         <input
                           type="time"
-                          value={preferences.lunchBreakEnd || '13:00'}
-                          onChange={e => setPreferences(prev => ({ ...prev, lunchBreakEnd: e.target.value || '13:00' }))}
-                          disabled={!preferences.protectLunchBreak}
-                          aria-label="Öğle arası bitiş"
+                          value={preferences.blockTimeEnd || '13:00'}
+                          onChange={e => setPreferences(prev => ({ ...prev, blockTimeEnd: e.target.value || '13:00' }))}
+                          disabled={!preferences.blockTimeRange}
+                          aria-label="Korumalı aralık bitişi"
                           className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 px-2 py-1 text-sm font-mono disabled:cursor-not-allowed"
                         />
                       </div>
