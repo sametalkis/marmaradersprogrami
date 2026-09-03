@@ -1,6 +1,6 @@
 import type { Course, SchedulePreferences, ScheduleSuggestion, ParsedSchedule } from '../types/Course';
 import { CourseTag, DAYS_OF_WEEK } from '../types/Course';
-import { parseSchedule, checkTimeConflict } from './excelParser';
+import { parseSchedule, parseAllSchedules, checkTimeConflict } from './excelParser';
 
 /**
  * Otomatik Ders Programı Oluşturucu
@@ -102,6 +102,54 @@ const countConflictsInCombination = (courses: Course[]): number => {
     }
   }
   return conflicts;
+};
+
+// Bir dersin tüm programlarını al (parsed schedules, yoksa parser ile)
+const getSchedules = (course: Course): ParsedSchedule[] => {
+  if (course.schedules && course.schedules.length > 0) {
+    return course.schedules;
+  }
+  const all = parseAllSchedules(course.dayTimeLocation);
+  if (all.length > 0) return all;
+  return [parseSchedule(course.dayTimeLocation)].filter(Boolean) as ParsedSchedule[];
+};
+
+// Ders, kısıtlamaları ihlal ediyor mu? (ZORUNLU filtre - puanlamaya dahil edilmez)
+export const violatesConstraints = (course: Course, prefs: SchedulePreferences): boolean => {
+  const freeDays = prefs.freeDays || [];
+  const protectLunch = !!prefs.protectLunchBreak &&
+    !!prefs.lunchBreakStart && !!prefs.lunchBreakEnd &&
+    prefs.lunchBreakEnd > prefs.lunchBreakStart;
+
+  for (const s of getSchedules(course)) {
+    // En erken başlangıç kısıtı
+    if (prefs.earliestStartTime && s.startTime < prefs.earliestStartTime) {
+      return true;
+    }
+
+    // Boş gün kısıtı
+    if (freeDays.length > 0 && freeDays.includes(s.day)) {
+      return true;
+    }
+
+    // Öğle arası koruması: [startTime, endTime) ile [lunchBreakStart, lunchBreakEnd) kesişimi
+    if (protectLunch) {
+      const start = timeToMinutes(s.startTime);
+      const end = timeToMinutes(s.endTime);
+      const lunchStart = timeToMinutes(prefs.lunchBreakStart!);
+      const lunchEnd = timeToMinutes(prefs.lunchBreakEnd!);
+      if (start < lunchEnd && lunchStart < end) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+// Kombinasyondaki hiçbir ders kısıtlamaları ihlal etmiyor mu?
+export const meetsConstraints = (courses: Course[], prefs: SchedulePreferences): boolean => {
+  return courses.every(course => !violatesConstraints(course, prefs));
 };
 
 // Kombinasyonu puanla (0 - 100 aralığında)
@@ -257,6 +305,9 @@ const findCombinations = (
     
     // Tüm etiketler işlendi
     if (tagIndex >= requirements.length) {
+      // Kısıt kontrolü (en erken saat / boş günler / öğle arası) - ZORUNLU filtre
+      if (!meetsConstraints(currentCombination, preferences)) return;
+
       // Çakışma kontrolü
       const conflicts = countConflictsInCombination(currentCombination);
       if (!preferences.allowConflicts && conflicts > 0) return;
@@ -299,7 +350,12 @@ const findCombinations = (
         if (localUsedBaseCodes.has(baseCode)) {
           continue;
         }
-        
+
+        // Kısıt kontrolü (en erken saat / boş günler / öğle arası) - ZORUNLU filtre
+        if (violatesConstraints(course, preferences)) {
+          continue;
+        }
+
         // Erken çakışma kontrolü (pruning)
         if (!preferences.allowConflicts) {
           const hasConflict = currentCombination.some(c => coursesConflict(c, course)) ||
@@ -371,7 +427,12 @@ export const defaultPreferences: SchedulePreferences = {
   allowConflicts: false,
   maxConflicts: 0,
   avoidEarlyMorning: false,
-  preferCompactSchedule: true
+  preferCompactSchedule: true,
+  earliestStartTime: undefined,
+  freeDays: [],
+  protectLunchBreak: false,
+  lunchBreakStart: '12:00',
+  lunchBreakEnd: '13:00'
 };
 
 // Uygun derslerden etiketli olanların sayısını hesapla (sabit etiketler)
