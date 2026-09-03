@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Wand2, Calendar, AlertTriangle, Check, Clock, ChevronRight, ChevronLeft, Plus, CheckCircle2 } from 'lucide-react';
 import type { Course, SchedulePreferences, ScheduleSuggestion, CustomTag, ParsedSchedule, ScheduleScenario } from '../types/Course';
-import { CourseTag, TAG_LABELS, TAG_DOTS, TAG_COLOR_PALETTE } from '../types/Course';
+import { CourseTag, TAG_LABELS, TAG_DOTS, TAG_COLOR_PALETTE, DAYS_OF_WEEK } from '../types/Course';
 import { generateScheduleSuggestions, defaultPreferences, countTaggedCourses, countUniqueCourses, countCustomTaggedCourses, countUniqueCustomTaggedCourses } from '../utils/scheduleGenerator';
 import { parseSchedule } from '../utils/excelParser';
 import { COURSE_COLORS, buildCourseColorMap } from '../utils/scheduleRenderUtils';
@@ -314,6 +314,16 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
     }));
   };
 
+  const toggleFreeDay = (day: string) => {
+    setPreferences(prev => {
+      const current = prev.freeDays || [];
+      const next = current.includes(day)
+        ? current.filter(d => d !== day)
+        : [...current, day];
+      return { ...prev, freeDays: next };
+    });
+  };
+
   const handleGenerate = () => {
     setIsGenerating(true);
     
@@ -595,6 +605,93 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       <p className="text-sm text-slate-500 dark:text-zinc-400">Dersler arası boşluk az olsun</p>
                     </div>
                   </label>
+
+                  {/* Gelişmiş Kısıtlar */}
+                  <div className="bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-4 border border-slate-200/60 dark:border-zinc-800/80 space-y-4">
+                    <div>
+                      <h5 className="font-semibold text-slate-700 dark:text-zinc-200 text-sm">Gelişmiş Kısıtlar</h5>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                        Bu kurallara uymayan dersler otomatik olarak elenir
+                      </p>
+                    </div>
+
+                    {/* En erken ders başlangıcı */}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-sm text-slate-700 dark:text-zinc-200 flex-shrink-0">En erken ders başlangıcı</span>
+                      <select
+                        value={preferences.earliestStartTime || ''}
+                        onChange={e => setPreferences(prev => ({ ...prev, earliestStartTime: e.target.value || undefined }))}
+                        className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 px-2 py-1 text-sm cursor-pointer"
+                      >
+                        <option value="">Yok</option>
+                        <option value="08:00">08:00</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00">10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option>
+                      </select>
+                    </div>
+
+                    {/* Boş günler */}
+                    <div>
+                      <span className="font-medium text-sm text-slate-700 dark:text-zinc-200 block mb-2">Boş günler</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {DAYS_OF_WEEK.map(day => {
+                          const isSelected = (preferences.freeDays || []).includes(day);
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => toggleFreeDay(day)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer active:scale-95 ${
+                                isSelected
+                                  ? 'bg-violet-600 border-violet-600 text-white hover:bg-violet-500'
+                                  : 'bg-white dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700'
+                              }`}
+                            >
+                              {day.substring(0, 3)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Öğle arası koruması */}
+                    <div>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={preferences.protectLunchBreak || false}
+                          onChange={e => setPreferences(prev => ({ ...prev, protectLunchBreak: e.target.checked }))}
+                          className="w-5 h-5 rounded text-violet-600"
+                        />
+                        <div>
+                          <span className="font-medium text-sm text-slate-700 dark:text-zinc-200">Öğle arası koruması</span>
+                          <p className="text-xs text-slate-500 dark:text-zinc-400">Bu saat aralığında ders olmasın</p>
+                        </div>
+                      </label>
+                      <div className={`flex items-center gap-2 mt-2 pl-8 ${!(preferences.protectLunchBreak) ? 'opacity-40 pointer-events-none' : ''}`}>
+                        <input
+                          type="time"
+                          value={preferences.lunchBreakStart || '12:00'}
+                          onChange={e => setPreferences(prev => ({ ...prev, lunchBreakStart: e.target.value || '12:00' }))}
+                          disabled={!preferences.protectLunchBreak}
+                          aria-label="Öğle arası başlangıç"
+                          className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 px-2 py-1 text-sm font-mono disabled:cursor-not-allowed"
+                        />
+                        <span className="text-sm text-slate-500 dark:text-zinc-400">-</span>
+                        <input
+                          type="time"
+                          value={preferences.lunchBreakEnd || '13:00'}
+                          onChange={e => setPreferences(prev => ({ ...prev, lunchBreakEnd: e.target.value || '13:00' }))}
+                          disabled={!preferences.protectLunchBreak}
+                          aria-label="Öğle arası bitiş"
+                          className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 px-2 py-1 text-sm font-mono disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </>
             ) : (
