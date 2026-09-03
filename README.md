@@ -123,6 +123,7 @@ Uygulamayı tarayıcınız üzerinden doğrudan kullanmak için:
 ├── public/
 │   └── favicon.png                   # Tarayıcı sekme ikonu
 ├── src/
+│   ├── assets/                       # Statik varlıklar (react.svg)
 │   ├── components/                   # Yeniden kullanılabilir UI bileşenleri
 │   │   ├── ExcelUploader.tsx         # Sürükle-bırak Excel yükleme ekranı
 │   │   ├── CourseList.tsx            # Ders listesi + sekmeli filtreleme
@@ -148,14 +149,16 @@ Uygulamayı tarayıcınız üzerinden doğrudan kullanmak için:
 │   │   └── exportUtils.ts            # PDF (canvas) / Excel / Metin export
 │   ├── App.tsx                       # Uygulama kabuğu, header araç çubuğu, durum yönetimi
 │   ├── main.tsx                      # React DOM giriş noktası
-│   └── index.css / App.css           # Tailwind katmanları ve özel stiller
+│   ├── index.css / App.css           # Tailwind katmanları ve özel stiller
+│   └── vite-env.d.ts                 # Vite istemci tip tanımları
 ├── index.html                        # PWA meta etiketleri ve tema-color
 ├── tailwind.config.js                # Tailwind yapılandırması
 ├── postcss.config.js                 # PostCSS (Tailwind) yapılandırması
 ├── eslint.config.js                  # ESLint yapılandırması
-├── tsconfig*.json                    # TypeScript proje yapılandırması
+├── tsconfig*.json                    # TypeScript proje yapılandırmaları
 ├── vite.config.ts                    # Vite yapılandırması
-├── wrangler.jsonc                    # Cloudflare Pages yapılandırması
+├── wrangler.jsonc                    # Cloudflare Workers yapılandırması
+├── LICENSE                           # GNU GPL v3
 └── package.json                      # Bağımlılıklar ve npm scriptleri
 ```
 
