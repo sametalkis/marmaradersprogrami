@@ -584,7 +584,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                         <select
                           value={preferences.maxConflicts}
                           onChange={e => setPreferences(prev => ({ ...prev, maxConflicts: parseInt(e.target.value) }))}
-                          className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                          className="rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 px-2 py-1 text-sm cursor-pointer"
                         >
                           <option value={1}>1</option>
                           <option value={2}>2</option>
