@@ -647,6 +647,9 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                     {/* Boş günler */}
                     <div>
                       <span className="font-medium text-sm text-slate-700 dark:text-zinc-200 block mb-2">Boş günler</span>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 -mt-1 mb-2">
+                        Bu günlerde ders olmasını istemediğin günleri seç
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {DAYS_OF_WEEK.map(day => {
                           const isSelected = (preferences.freeDays || []).includes(day);
