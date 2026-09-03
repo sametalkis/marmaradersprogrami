@@ -2,6 +2,7 @@
   "name": "marmara-schedule-app",
   "private": true,
   "version": "1.0.0",
+  "license": "GPL-3.0-or-later",
   "description": "Marmara Üniversitesi öğrencileri için ders programı oluşturma uygulaması",
   "author": "Samuel Vanunu",
   "keywords": [

@@ -11,12 +11,16 @@
 <br>
 
 <div align="center">
-    <a href="https://github.com/sametalkis/marmaradersprogrami">
-        <img alt="Depo" src="https://img.shields.io/badge/GitHub-sametalkis%2Fmarmaradersprogrami-181717?style=for-the-badge&logo=github&logoColor=white"/>
+    <a href="https://marmaradersprogrami.sametalkis.me/">
+        <img alt="Canlı Uygulama" src="https://img.shields.io/badge/Canl%C4%B1%20Web%20Uygulamas%C4%B1-marmaradersprogrami.sametalkis.me-00b4d8?style=for-the-badge&logo=cloudflare&logoColor=white"/>
     </a>
 </div>
 
 <br>
+
+<div align="center">
+    <a href="https://marmaradersprogrami.sametalkis.me/"><img alt="Canlı Demo" src="https://img.shields.io/badge/Web-marmaradersprogrami.sametalkis.me-blue?style=flat-square"/></a>
+    <a href="https://github.com/facebook/react"><img alt="React 19" src="https://img.shields.io/badge/React-19.1-61DAFB?style=flat-square&logo=react&logoColor=black"/></a>
 
 <div align="center">
     <a href="https://github.com/facebook/react"><img alt="React 19" src="https://img.shields.io/badge/React-19.1-61DAFB?style=flat-square&logo=react&logoColor=black"/></a>
@@ -27,7 +31,16 @@
     <a href="https://sheetjs.com/"><img alt="SheetJS" src="https://img.shields.io/badge/SheetJS-xlsx-16A34A?style=flat-square"/></a>
     <a href="https://rawgit.com/MrRio/jsPDF/master/"><img alt="jsPDF" src="https://img.shields.io/badge/jsPDF-3.0-E2352C?style=flat-square"/></a>
     <a href="https://lucide.dev/"><img alt="Lucide" src="https://img.shields.io/badge/Lucide-Icons-F56565?style=flat-square"/></a>
+    <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square"/></a>
 </div>
+
+<br>
+
+## Canlı Uygulama
+
+Uygulamayı tarayıcınız üzerinden doğrudan kullanmak için:
+
+**[https://marmaradersprogrami.sametalkis.me/](https://marmaradersprogrami.sametalkis.me/)**
 
 <br>
 
@@ -142,6 +155,7 @@
 ├── eslint.config.js                  # ESLint yapılandırması
 ├── tsconfig*.json                    # TypeScript proje yapılandırması
 ├── vite.config.ts                    # Vite yapılandırması
+├── wrangler.jsonc                    # Cloudflare Pages yapılandırması
 └── package.json                      # Bağımlılıklar ve npm scriptleri
 ```
 
@@ -227,7 +241,7 @@ Uygulama harici sunucuya veri göndermez, telemetri içermez ve hesap gerektirme
 
 ## Lisans
 
-Bu proje henüz resmi bir lisansa sahip değil. Kod şu anda yalnızca kişisel kullanım ve katkı amaçlı paylaşılıyor; dağıtım koşulları için depo sahibiyle iletişime geçin.
+Bu proje **GNU General Public License v3.0 (GPL-3.0)** altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakınız.
 
 ---
 
