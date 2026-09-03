@@ -7,6 +7,7 @@ import { parseSchedule, checkTimeConflict } from '../utils/excelParser';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { COURSE_COLORS, timeToMinutes, endTimeToMinutes, getScheduleItemsForDay, buildCourseColorMap } from '../utils/scheduleRenderUtils';
 import type { ScheduleItem } from '../utils/scheduleRenderUtils';
+import { ScheduleStats } from './ScheduleStats';
 
 interface ScheduleViewerProps {
   courses: Course[];
@@ -447,6 +448,9 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Haftalık İstatistik Paneli (Dikey/Yatay/Mobil tüm görünümlerin üstünde) */}
+      <ScheduleStats courses={selectedCourses} />
 
       {/* MOBİL GÜNLÜK AJANDA MODU (Mobilde 5 günün birbirine girmesini önler, Apple/Google Calendar gibi gün bazlı tam genişlik kartlar sunar) */}
       <div data-view="mobile-agenda" className="block lg:hidden p-3.5 space-y-3">
