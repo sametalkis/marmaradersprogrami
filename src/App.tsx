@@ -485,22 +485,22 @@ function App() {
 
   if (courses.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-950 relative flex items-center justify-center p-4 overflow-hidden">
+      <div className="min-h-screen bg-slate-100 dark:bg-slate-950 relative flex items-center justify-center p-4 overflow-hidden transition-colors duration-300">
         {/* Ambient background glows */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-indigo-600/20 rounded-full blur-[130px] pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] bg-violet-600/15 rounded-full blur-[110px] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-indigo-600/10 dark:bg-indigo-600/20 rounded-full blur-[130px] pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] bg-violet-600/5 dark:bg-violet-600/15 rounded-full blur-[110px] pointer-events-none" />
 
         <div className="max-w-xl w-full relative z-10">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-4">
               <BookOpen className="w-3.5 h-3.5" />
               Marmara Üniversitesi
             </div>
-            <h1 className="text-4xl font-extrabold text-white tracking-tight mb-3">
+            <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">
               Ders Programı Oluşturucu
             </h1>
-            <p className="text-slate-400 text-base max-w-md mx-auto">
-              Sunulan dersler Excel listenizi yükleyerek haftalık çakışmasız programınızı saniyeler içinde oluşturun.
+            <p className="text-slate-500 dark:text-slate-400 text-base max-w-md mx-auto">
+              Excel listenizi yükleyin, çakışmasız haftalık ders programınız saniyeler içinde hazır olsun.
             </p>
           </div>
           <ExcelUploader onDataLoaded={handleDataLoaded} />

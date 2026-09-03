@@ -77,9 +77,9 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
       <div
         className={`
           relative group border-2 border-dashed rounded-3xl p-10 text-center transition-all duration-200
-          ${isDragOver 
-            ? 'border-indigo-500 bg-indigo-500/10 shadow-xl shadow-indigo-500/10' 
-            : 'border-slate-800 bg-slate-900/60 backdrop-blur-xl hover:border-slate-700 shadow-2xl shadow-black/40'}
+          ${isDragOver
+            ? 'border-indigo-500 bg-indigo-500/10 shadow-xl shadow-indigo-500/10'
+            : 'border-slate-300 bg-white/60 dark:border-slate-800 dark:bg-slate-900/60 backdrop-blur-xl hover:border-slate-400 dark:hover:border-slate-700 shadow-xl shadow-slate-900/5 dark:shadow-2xl dark:shadow-black/40'}
           ${isLoading ? 'opacity-50 pointer-events-none' : ''}
         `}
         onDrop={handleDrop}
@@ -98,10 +98,10 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
           )}
           
           <div>
-            <h3 className="text-xl font-bold text-white mb-1.5 tracking-tight">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1.5 tracking-tight">
               {isLoading ? 'Dosya İşleniyor...' : 'Excel Dosyasını Sürükleyin'}
             </h3>
-            <p className="text-sm text-slate-400 mb-6 max-w-sm mx-auto">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-sm mx-auto">
               Sunulan dersler listesini içeren .xlsx veya .xls uzantılı dosyayı buraya bırakın veya cihazınızdan seçin
             </p>
             
@@ -122,7 +122,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
             </label>
           </div>
           
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
             Desteklenen formatlar: .xlsx, .xls
           </p>
         </div>
