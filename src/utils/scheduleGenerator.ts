@@ -104,15 +104,15 @@ const countConflictsInCombination = (courses: Course[]): number => {
   return conflicts;
 };
 
-// Kombinasyonu puanla
+// Kombinasyonu puanla (0 - 100 aralığında)
 const scoreSchedule = (courses: Course[], preferences: SchedulePreferences): number => {
-  let score = 100; // Başlangıç puanı
+  let score = 100; // Mükemmel başlangıç puanı
   
-  // Çakışma cezası
+  // 1. Çakışma cezası (Her çakışan ders çifti için -30 puan)
   const conflicts = countConflictsInCombination(courses);
-  score -= conflicts * 20;
+  score -= conflicts * 30;
   
-  // Erken sabah cezası
+  // 2. Erken sabah dersi cezası (08:00 - 09:00 arası başlayan her ders için -8 puan)
   if (preferences.avoidEarlyMorning) {
     courses.forEach(course => {
       const schedules = course.schedules || [parseSchedule(course.dayTimeLocation)].filter(Boolean);
@@ -120,14 +120,14 @@ const scoreSchedule = (courses: Course[], preferences: SchedulePreferences): num
         if (s) {
           const hour = parseInt(s.startTime.split(':')[0]);
           if (hour < 9) {
-            score -= 5;
+            score -= 8;
           }
         }
       });
     });
   }
   
-  // Kompakt program bonusu
+  // 3. Kompakt program değerlendirmesi
   if (preferences.preferCompactSchedule) {
     const dayMap = new Map<string, ParsedSchedule[]>();
     
@@ -143,29 +143,34 @@ const scoreSchedule = (courses: Course[], preferences: SchedulePreferences): num
       });
     });
     
-    // Az gün kullanılıyorsa bonus
+    // Gün sayısı değerlendirmesi (Fazla güne yayılma cezası)
     const usedDays = dayMap.size;
-    if (usedDays <= 3) score += 10;
-    else if (usedDays <= 4) score += 5;
+    if (usedDays >= 5) {
+      score -= 12; // 5 güne yayılmışsa -12
+    } else if (usedDays === 4) {
+      score -= 5;  // 4 güne yayılmışsa -5
+    }
     
-    // Dersler arası boşluk az ise bonus
+    // Aynı gün içindeki dersler arası bekleme boşluğu cezası
     dayMap.forEach(schedules => {
       if (schedules.length > 1) {
         schedules.sort((a, b) => a.startTime.localeCompare(b.startTime));
-        let gapMinutes = 0;
         for (let i = 0; i < schedules.length - 1; i++) {
           const end = timeToMinutes(schedules[i].endTime);
           const start = timeToMinutes(schedules[i + 1].startTime);
-          gapMinutes += Math.max(0, start - end);
+          const gapMinutes = Math.max(0, start - end);
+          if (gapMinutes > 120) {
+            score -= 8; // 2 saatten fazla bekleme boşluğu
+          } else if (gapMinutes > 60) {
+            score -= 4; // 1 saatten fazla bekleme boşluğu
+          }
         }
-        // Boşluk az ise bonus
-        if (gapMinutes <= 30) score += 3;
-        else if (gapMinutes <= 60) score += 1;
       }
     });
   }
   
-  return Math.max(0, score);
+  // Puan kesinlikle 0 ile 100 arasında sınırlandırılır
+  return Math.min(100, Math.max(0, Math.round(score)));
 };
 
 const timeToMinutes = (time: string): number => {

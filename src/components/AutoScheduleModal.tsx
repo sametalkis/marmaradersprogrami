@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { X, Wand2, Calendar, AlertTriangle, Check, Clock, ChevronRight, ChevronLeft } from 'lucide-react';
-import type { Course, SchedulePreferences, ScheduleSuggestion, CustomTag, ParsedSchedule } from '../types/Course';
-import { CourseTag, TAG_LABELS, TAG_COLOR_PALETTE } from '../types/Course';
+import { X, Wand2, Calendar, AlertTriangle, Check, Clock, ChevronRight, ChevronLeft, Plus, CheckCircle2 } from 'lucide-react';
+import type { Course, SchedulePreferences, ScheduleSuggestion, CustomTag, ParsedSchedule, ScheduleScenario } from '../types/Course';
+import { CourseTag, TAG_LABELS, TAG_DOTS, TAG_COLOR_PALETTE } from '../types/Course';
 import { generateScheduleSuggestions, defaultPreferences, countTaggedCourses, countUniqueCourses, countCustomTaggedCourses, countUniqueCustomTaggedCourses } from '../utils/scheduleGenerator';
 import { parseSchedule } from '../utils/excelParser';
+import { COURSE_COLORS, buildCourseColorMap } from '../utils/scheduleRenderUtils';
+import type { ScheduleItem } from '../utils/scheduleRenderUtils';
 
 interface AutoScheduleModalProps {
   isOpen: boolean;
@@ -11,28 +13,9 @@ interface AutoScheduleModalProps {
   eligibleCourses: Course[];
   customTags?: CustomTag[];
   onApplySuggestion: (courses: Course[]) => void;
-}
-
-// Ders renkleri - her ders için farklı renk (ScheduleViewer ile aynı)
-const COURSE_COLORS = [
-  { bg: 'bg-violet-500', text: 'text-white', light: 'bg-violet-100' },
-  { bg: 'bg-emerald-500', text: 'text-white', light: 'bg-emerald-100' },
-  { bg: 'bg-amber-500', text: 'text-white', light: 'bg-amber-100' },
-  { bg: 'bg-rose-500', text: 'text-white', light: 'bg-rose-100' },
-  { bg: 'bg-cyan-500', text: 'text-white', light: 'bg-cyan-100' },
-  { bg: 'bg-fuchsia-500', text: 'text-white', light: 'bg-fuchsia-100' },
-  { bg: 'bg-lime-500', text: 'text-white', light: 'bg-lime-100' },
-  { bg: 'bg-orange-500', text: 'text-white', light: 'bg-orange-100' },
-  { bg: 'bg-teal-500', text: 'text-white', light: 'bg-teal-100' },
-  { bg: 'bg-indigo-500', text: 'text-white', light: 'bg-indigo-100' },
-];
-
-interface ScheduleItem {
-  course: Course;
-  schedule: ParsedSchedule;
-  stackIndex: number;
-  stackSize: number;
-  hasConflict: boolean;
+  scenarios?: ScheduleScenario[];
+  activeScenarioId?: string;
+  onApplyToScenario?: (courses: Course[], scenarioId?: string, newScenarioName?: string) => void;
 }
 
 // Mini Schedule Preview Component - ScheduleViewer ile aynı görünüm
@@ -41,33 +24,53 @@ const MiniSchedulePreview: React.FC<{
   customTags: CustomTag[];
 }> = ({ courses }) => {
   const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'];
-  const hours = Array.from({ length: 11 }, (_, i) => 8 + i); // 08:00 - 18:00
+  
+  // En geç bitiş saatini dinamik olarak hesapla (en az 18:00, gerekirse 19:00, 20:00 vs.)
+  const maxEndHour = useMemo(() => {
+    let maxH = 18;
+    courses.forEach(c => {
+      const schedules = c.schedules || [parseSchedule(c.dayTimeLocation)].filter(Boolean);
+      schedules.forEach(s => {
+        if (s && s.endTime) {
+          const [h, m] = s.endTime.split(':').map(Number);
+          const endH = m > 0 ? h + 1 : h;
+          if (endH > maxH) maxH = endH;
+        }
+      });
+    });
+    return Math.min(23, maxH);
+  }, [courses]);
+
+  const START_HOUR = 8;
+  const END_HOUR = maxEndHour;
+  const hours = useMemo(() => {
+    return Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
+  }, [END_HOUR]);
   
   // Her derse bir renk ata
-  const courseColorMap = useMemo(() => {
-    const map = new Map<string, typeof COURSE_COLORS[0]>();
-    courses.forEach((course, index) => {
-      map.set(course.id, COURSE_COLORS[index % COURSE_COLORS.length]);
-    });
-    return map;
-  }, [courses]);
+  const courseColorMap = useMemo(() => buildCourseColorMap(courses), [courses]);
   
   const timeToMinutes = (time: string): number => {
     const [h, m] = time.split(':').map(Number);
     return h * 60 + m;
   };
 
-  // Dersin pozisyonunu ve genişliğini hesapla (yüzde olarak)
+  // Dersin pozisyonunu ve genişliğini hesapla (yüzde olarak) - taşmayı kesin olarak önler
   const getCourseStyle = (startTime: string, endTime: string, stackIndex: number, stackSize: number) => {
-    const dayStart = 8 * 60; // 08:00
-    const dayEnd = 18 * 60;  // 18:00
+    const dayStart = START_HOUR * 60; // 08:00
+    const dayEnd = END_HOUR * 60;     // Dinamik bitiş saati (örn: 19:00 veya 20:00)
     const totalMinutes = dayEnd - dayStart;
     
     const startMin = timeToMinutes(startTime);
-    const endMin = timeToMinutes(endTime);
+    const [eh, em] = endTime.split(':').map(Number);
+    // Marmara 50 dk bloklarında yuvarlama kontrolü
+    const endMin = (em >= 45 && em <= 55) ? (eh + 1) * 60 : eh * 60 + em;
     
-    const left = ((startMin - dayStart) / totalMinutes) * 100;
-    const width = ((endMin - startMin) / totalMinutes) * 100;
+    const rawLeft = ((startMin - dayStart) / totalMinutes) * 100;
+    const rawWidth = ((endMin - startMin) / totalMinutes) * 100;
+
+    const left = Math.max(0, Math.min(100, rawLeft));
+    const width = Math.min(100 - left, rawWidth);
     
     // Dikey pozisyon (çakışan dersler için)
     const heightPercent = 100 / stackSize;
@@ -139,24 +142,26 @@ const MiniSchedulePreview: React.FC<{
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      {/* Saat başlıkları */}
-      <div className="flex border-b border-slate-200 bg-slate-50">
-        <div className="w-16 flex-shrink-0 p-2 text-xs font-semibold text-slate-500 text-center"></div>
-        <div className="flex-1 flex">
-          {hours.map(hour => (
-            <div 
-              key={hour} 
-              className="flex-1 text-center text-[11px] font-semibold text-slate-500 py-2"
-            >
-              {hour.toString().padStart(2, '0')}:00
+    <div className="bg-white dark:bg-zinc-950 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-inner">
+      <div className="overflow-x-auto scrollbar-thin">
+        <div className="min-w-[480px] sm:min-w-full">
+          {/* Saat başlıkları */}
+          <div className="flex border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900">
+            <div className="w-14 sm:w-16 flex-shrink-0 p-2 text-xs font-semibold text-slate-500 dark:text-zinc-400 text-center"></div>
+            <div className="flex-1 flex">
+              {hours.map(hour => (
+                <div 
+                  key={hour} 
+                  className="flex-1 text-center text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-zinc-400 py-1.5 sm:py-2 font-mono"
+                >
+                  {hour.toString().padStart(2, '0')}:00
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Günler ve dersler */}
-      <div className="space-y-1 p-2">
+          </div>
+          
+          {/* Günler ve dersler */}
+          <div className="space-y-1 p-1.5 sm:p-2">
         {days.map(day => {
           const scheduleItems = getScheduleItemsForDay(day);
 
@@ -164,19 +169,19 @@ const MiniSchedulePreview: React.FC<{
             <div key={day} className="flex items-stretch">
               {/* Gün etiketi */}
               <div className="w-16 flex-shrink-0 flex items-center">
-                <span className="text-xs font-bold text-slate-700 bg-slate-200/50 px-2 py-1.5 rounded-lg w-full text-center">
+                <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 bg-slate-200/50 dark:bg-zinc-800 px-2 py-1.5 rounded-lg w-full text-center">
                   {day.substring(0, 3)}
                 </span>
               </div>
               
               {/* Ders alanı */}
-              <div className="flex-1 relative bg-slate-100/50 rounded-lg min-h-[60px] border border-slate-200/50 ml-1">
+              <div className="flex-1 relative bg-slate-100/50 dark:bg-black/40 rounded-lg min-h-[60px] border border-slate-200/50 dark:border-zinc-800/80 ml-1">
                 {/* Saat çizgileri */}
                 <div className="absolute inset-0 flex">
                   {hours.map((hour, i) => (
                     <div 
                       key={hour} 
-                      className={`flex-1 ${i < hours.length - 1 ? 'border-r border-slate-200/50' : ''}`}
+                      className={`flex-1 ${i < hours.length - 1 ? 'border-r border-slate-200/50 dark:border-zinc-800/60' : ''}`}
                     />
                   ))}
                 </div>
@@ -197,7 +202,7 @@ const MiniSchedulePreview: React.FC<{
                         top: `calc(${style.top} + 2px)`,
                         height: `calc(${style.height} - 4px)`
                       }}
-                      title={`${course.courseCode} - ${course.courseName}\n${course.instructor}\n${schedule.startTime}-${schedule.endTime}\n${schedule.classroom}${hasConflict ? '\n⚠️ Çakışma var!' : ''}`}
+                      title={`${course.courseCode} - ${course.courseName}\n${course.instructor}\n${schedule.startTime}-${schedule.endTime}\n${schedule.classroom}${hasConflict ? '\nÇakışma var!' : ''}`}
                     >
                       <div className={`${isCompact ? 'p-0.5' : 'p-1.5'} h-full flex flex-col justify-center overflow-hidden`}>
                         <div className={`font-bold ${isCompact ? 'text-[9px]' : 'text-[11px]'} leading-tight truncate`}>
@@ -221,17 +226,19 @@ const MiniSchedulePreview: React.FC<{
             </div>
           );
         })}
+          </div>
+        </div>
       </div>
       
       {/* Ders Listesi Legend */}
-      <div className="px-3 py-2 border-t border-slate-200 bg-slate-50">
+      <div className="px-3 py-2 border-t border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900">
         <div className="flex flex-wrap gap-1.5">
           {courses.map(course => {
             const color = courseColorMap.get(course.id) || COURSE_COLORS[0];
             return (
               <div 
                 key={course.id} 
-                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${color.light} text-slate-700`}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${color.light} text-slate-700 dark:text-zinc-200 dark:bg-zinc-800`}
               >
                 <div className={`w-2 h-2 rounded-full ${color.bg}`}></div>
                 <span className="font-medium">{course.courseCode.replace(/\.\d+$/, '')}</span>
@@ -249,13 +256,20 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
   onClose,
   eligibleCourses,
   customTags = [],
-  onApplySuggestion
+  onApplySuggestion,
+  scenarios = [],
+  activeScenarioId,
+  onApplyToScenario
 }) => {
   const [preferences, setPreferences] = useState<SchedulePreferences>(defaultPreferences);
   const [suggestions, setSuggestions] = useState<ScheduleSuggestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [step, setStep] = useState<'config' | 'results'>('config');
+
+  const activeScenario = useMemo(() => {
+    return scenarios.find(s => s.id === activeScenarioId);
+  }, [scenarios, activeScenarioId]);
 
   // Sabit etiketli derslerin sayısını hesapla
   const tagCounts = useMemo(() => countTaggedCourses(eligibleCourses), [eligibleCourses]);
@@ -313,12 +327,33 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
     }, 100);
   };
 
-  const handleApply = () => {
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const handleApplyCurrent = () => {
     const suggestion = suggestions[currentIndex];
     if (suggestion) {
-      onApplySuggestion(suggestion.courses);
-      onClose();
-      resetState();
+      if (onApplyToScenario && activeScenarioId) {
+        onApplyToScenario(suggestion.courses, activeScenarioId);
+      } else {
+        onApplySuggestion(suggestion.courses);
+      }
+      setFeedback(`✓ ${activeScenario?.name || 'Program'} güncellendi!`);
+      setTimeout(() => setFeedback(null), 2500);
+    }
+  };
+
+  const handleApplyNewScenario = () => {
+    const suggestion = suggestions[currentIndex];
+    if (suggestion) {
+      const nextNum = scenarios.length + 1;
+      const newName = `Taslak ${nextNum} (${suggestion.score}p)`;
+      if (onApplyToScenario) {
+        onApplyToScenario(suggestion.courses, undefined, newName);
+      } else {
+        onApplySuggestion(suggestion.courses);
+      }
+      setFeedback(`✓ ${newName} oluşturuldu!`);
+      setTimeout(() => setFeedback(null), 2500);
     }
   };
 
@@ -350,7 +385,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
   const currentSuggestion = suggestions[currentIndex];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="auto-schedule-title">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"
@@ -358,140 +393,139 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
       />
       
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className={`relative bg-white rounded-2xl shadow-2xl w-full transform transition-all max-h-[90vh] overflow-hidden flex flex-col ${
-          step === 'results' ? 'max-w-4xl' : 'max-w-2xl'
-        }`}>
-          {/* Header */}
-          <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <Wand2 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Otomatik Program Oluştur</h3>
-                  <p className="text-violet-200 text-sm">
-                    {step === 'config' ? 'Tercihlerini belirle' : `${suggestions.length} öneri bulundu`}
-                  </p>
-                </div>
+      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className={`relative bg-white dark:bg-zinc-950 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full transform transition-all h-[94vh] sm:h-auto sm:max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 dark:border-zinc-900 ${
+        step === 'results' ? 'max-w-4xl' : 'max-w-2xl'
+      }`}>
+        {/* Header */}
+        <div className="bg-slate-900 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-white/10 text-white rounded-lg flex-shrink-0">
+                <Wand2 className="h-4 sm:h-5 w-4 sm:w-5" />
               </div>
-              <button
-                onClick={handleClose}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-white" />
-              </button>
+              <div>
+                <h3 id="auto-schedule-title" className="text-base sm:text-xl font-bold text-white tracking-tight">Otomatik Program Oluştur</h3>
+                <p className="text-slate-400 text-[11px] sm:text-xs font-medium">
+                  {step === 'config' ? 'Tercihlerini belirle' : `${suggestions.length} öneri bulundu`}
+                </p>
+              </div>
             </div>
+            <button
+              onClick={handleClose}
+              className="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
+        </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {step === 'config' ? (
-              <>
-                {/* Uyarı - Etiketli ders yoksa */}
-                {totalTagged === 0 ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-amber-800">Etiketli ders bulunamadı!</p>
-                        <p className="text-sm text-amber-700 mt-1">
-                          Otomatik program oluşturmak için önce "Uygun Dersler" bölümünden derslere etiket atamalısın 
-                          (Zorunlu, Seçmeli, Önemli, İsteğe Bağlı).
-                        </p>
-                      </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6">
+          {step === 'config' ? (
+            <>
+              {/* Uyarı - Etiketli ders yoksa */}
+              {totalTagged === 0 ? (
+                <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-200">Etiketli ders bulunamadı!</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        Otomatik program oluşturmak için önce "Uygun Dersler" bölümünden derslere etiket atamalısın 
+                        (Zorunlu, Seçmeli, Önemli, İsteğe Bağlı).
+                      </p>
                     </div>
                   </div>
-                ) : (
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
-                    <p className="text-sm text-indigo-700">
-                      <strong>{totalUnique}</strong> farklı ders bulundu ({totalTagged} section). 
-                      <span className="block mt-1 text-indigo-600">
-                        💡 Aynı dersin farklı section'larından (örn: XXX.1, XXX.2) sadece biri seçilir.
-                      </span>
-                    </p>
-                  </div>
-                )}
+                </div>
+              ) : (
+                <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                    <strong>{totalUnique}</strong> farklı ders bulundu ({totalTagged} section). 
+                    <span className="block mt-1 text-indigo-600 dark:text-indigo-400">
+                      Not: Aynı dersin farklı section'larından (örn: XXX.1, XXX.2) sadece biri seçilir.
+                    </span>
+                  </p>
+                </div>
+              )}
 
                 {/* Ders Sayıları */}
-                <div className="space-y-4 mb-6">
-                  <h4 className="font-semibold text-slate-700">Kaç ders almak istiyorsun?</h4>
-                  
+                  <div className="space-y-4 mb-6">
+                  <h4 className="font-semibold text-slate-700 dark:text-zinc-200">Kaç ders almak istiyorsun?</h4>
+
                   {/* Sabit Etiketler */}
                   {Object.values(CourseTag).map(tag => (
-                    <div key={tag} className="flex items-center justify-between bg-slate-50 rounded-xl p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">{TAG_LABELS[tag].split(' ')[0]}</span>
-                        <div>
-                          <span className="font-medium text-slate-700">{TAG_LABELS[tag].split(' ')[1]}</span>
-                          <span className="text-sm text-slate-500 ml-2">
-                            ({uniqueCounts[tag]} ders{tagCounts[tag] > uniqueCounts[tag] ? `, ${tagCounts[tag]} section` : ''})
+                    <div key={tag} className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-zinc-900/80 rounded-xl p-3 sm:p-4 border border-slate-200/60 dark:border-zinc-800/80">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <span className={`w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full flex-shrink-0 ${TAG_DOTS[tag]}`} />
+                        <div className="min-w-0">
+                          <span className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-zinc-200 block sm:inline">{TAG_LABELS[tag]}</span>
+                          <span className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 sm:ml-2 block sm:inline">
+                            ({uniqueCounts[tag]} ders{tagCounts[tag] > uniqueCounts[tag] ? `, ${tagCounts[tag]} sect.` : ''})
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                         <button
                           onClick={() => handleRequirementChange(tag, preferences.requirements[tag] - 1)}
                           disabled={preferences.requirements[tag] <= 0}
-                          className="w-8 h-8 rounded-lg bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed font-bold active:scale-95 transition-all text-base cursor-pointer"
                         >
                           -
                         </button>
-                        <span className="w-8 text-center font-bold text-lg">
+                        <span className="w-6 sm:w-8 text-center font-bold text-sm sm:text-base font-mono dark:text-white">
                           {preferences.requirements[tag]}
                         </span>
                         <button
                           onClick={() => handleRequirementChange(tag, preferences.requirements[tag] + 1)}
                           disabled={preferences.requirements[tag] >= uniqueCounts[tag]}
-                          className="w-8 h-8 rounded-lg bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed font-bold active:scale-95 transition-all text-base cursor-pointer"
                         >
                           +
                         </button>
                       </div>
                     </div>
                   ))}
-                  
+
                   {/* Özel Etiketler */}
-                  {Object.entries(customTagCounts).map(([tagId, count]) => {
-                    const customTag = getCustomTagInfo(tagId);
-                    if (!customTag) return null;
-                    
-                    const colorStyle = getCustomTagColor(customTag.color);
+                  {customTags.map(customTag => {
+                    const tagId = customTag.id;
+                    const count = customTagCounts[tagId] || 0;
                     const uniqueCount = uniqueCustomCounts[tagId] || 0;
+                    const colorStyle = TAG_COLOR_PALETTE.find(c => c.id === customTag.color);
                     const currentValue = preferences.customRequirements[tagId] || 0;
-                    
+
                     return (
-                      <div 
-                        key={tagId} 
-                        className={`flex items-center justify-between rounded-xl p-4 ${colorStyle?.light || 'bg-slate-50'}`}
+                      <div
+                        key={tagId}
+                        className={`flex items-center justify-between gap-2 rounded-xl p-3 sm:p-4 border border-slate-200/60 dark:border-zinc-800/80 ${colorStyle?.light || 'bg-slate-50 dark:bg-zinc-900/80'}`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">{customTag.emoji}</span>
-                          <div>
-                            <span className={`font-medium ${colorStyle?.text || 'text-slate-700'}`}>
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                          <span className="text-base sm:text-lg flex-shrink-0">{customTag.emoji}</span>
+                          <div className="min-w-0">
+                            <span className={`font-semibold text-xs sm:text-sm block sm:inline ${colorStyle?.text || 'text-slate-800 dark:text-zinc-200'}`}>
                               {customTag.name}
                             </span>
-                            <span className="text-sm opacity-70 ml-2">
-                              ({uniqueCount} ders{count > uniqueCount ? `, ${count} section` : ''})
+                            <span className="text-[11px] sm:text-xs opacity-70 sm:ml-2 block sm:inline dark:text-zinc-400">
+                              ({uniqueCount} ders{count > uniqueCount ? `, ${count} sect.` : ''})
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                           <button
                             onClick={() => handleCustomRequirementChange(tagId, currentValue - 1)}
                             disabled={currentValue <= 0}
-                            className="w-8 h-8 rounded-lg bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed font-bold active:scale-95 transition-all text-base cursor-pointer"
                           >
                             -
                           </button>
-                          <span className="w-8 text-center font-bold text-lg">
+                          <span className="w-6 sm:w-8 text-center font-bold text-sm sm:text-base font-mono dark:text-white">
                             {currentValue}
                           </span>
                           <button
                             onClick={() => handleCustomRequirementChange(tagId, currentValue + 1)}
                             disabled={currentValue >= uniqueCount}
-                            className="w-8 h-8 rounded-lg bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed font-bold active:scale-95 transition-all text-base cursor-pointer"
                           >
                             +
                           </button>
@@ -503,9 +537,9 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
 
                 {/* Tercihler */}
                 <div className="space-y-3 mb-6">
-                  <h4 className="font-semibold text-slate-700">Tercihler</h4>
+                  <h4 className="font-semibold text-slate-700 dark:text-zinc-200">Tercihler</h4>
                   
-                  <label className="flex items-center gap-3 bg-slate-50 rounded-xl p-4 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <label className="flex items-center gap-3 bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors">
                     <input
                       type="checkbox"
                       checked={preferences.allowConflicts}
@@ -517,12 +551,12 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       className="w-5 h-5 rounded text-violet-600"
                     />
                     <div className="flex-1">
-                      <span className="font-medium text-slate-700">Çakışmaya izin ver</span>
-                      <p className="text-sm text-slate-500">Bazı dersler aynı saatte olabilir</p>
+                      <span className="font-medium text-slate-700 dark:text-zinc-200">Çakışmaya izin ver</span>
+                      <p className="text-sm text-slate-500 dark:text-zinc-400">Bazı dersler aynı saatte olabilir</p>
                     </div>
                     {preferences.allowConflicts && (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-500">Max:</span>
+                        <span className="text-sm text-slate-500 dark:text-zinc-400">Max:</span>
                         <select
                           value={preferences.maxConflicts}
                           onChange={e => setPreferences(prev => ({ ...prev, maxConflicts: parseInt(e.target.value) }))}
@@ -536,7 +570,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                     )}
                   </label>
 
-                  <label className="flex items-center gap-3 bg-slate-50 rounded-xl p-4 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <label className="flex items-center gap-3 bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors">
                     <input
                       type="checkbox"
                       checked={preferences.avoidEarlyMorning}
@@ -544,12 +578,12 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       className="w-5 h-5 rounded text-violet-600"
                     />
                     <div>
-                      <span className="font-medium text-slate-700">Sabah 08:00-09:00 derslerinden kaçın</span>
-                      <p className="text-sm text-slate-500">Erken saatler tercih edilmez</p>
+                      <span className="font-medium text-slate-700 dark:text-zinc-200">Sabah 08:00-09:00 derslerinden kaçın</span>
+                      <p className="text-sm text-slate-500 dark:text-zinc-400">Erken saatler tercih edilmez</p>
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 bg-slate-50 rounded-xl p-4 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <label className="flex items-center gap-3 bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors">
                     <input
                       type="checkbox"
                       checked={preferences.preferCompactSchedule}
@@ -557,8 +591,8 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       className="w-5 h-5 rounded text-violet-600"
                     />
                     <div>
-                      <span className="font-medium text-slate-700">Kompakt program tercih et</span>
-                      <p className="text-sm text-slate-500">Dersler arası boşluk az olsun</p>
+                      <span className="font-medium text-slate-700 dark:text-zinc-200">Kompakt program tercih et</span>
+                      <p className="text-sm text-slate-500 dark:text-zinc-400">Dersler arası boşluk az olsun</p>
                     </div>
                   </label>
                 </div>
@@ -567,15 +601,15 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
               /* Results Step - Carousel View */
               <div>
                 {suggestions.length === 0 ? (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                  <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 rounded-xl p-6 text-center">
                     <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-3" />
-                    <p className="font-medium text-red-800">Uygun program bulunamadı!</p>
-                    <p className="text-sm text-red-600 mt-2">
+                    <p className="font-medium text-red-800 dark:text-red-200">Uygun program bulunamadı!</p>
+                    <p className="text-sm text-red-600 dark:text-red-300 mt-2">
                       Tercihlerini değiştirmeyi veya çakışmaya izin vermeyi dene.
                     </p>
                     <button
                       onClick={() => setStep('config')}
-                      className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                      className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
                     >
                       Geri Dön
                     </button>
@@ -583,36 +617,37 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                 ) : currentSuggestion && (
                   <div className="space-y-4">
                     {/* Navigation Header */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2 p-1">
                       <button
                         onClick={goToPrev}
                         disabled={currentIndex === 0}
-                        className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer"
+                        aria-label="Önceki öneri"
                       >
-                        <ChevronLeft className="h-6 w-6" />
+                        <ChevronLeft className="h-5 sm:h-6 w-5 sm:w-6 text-slate-700 dark:text-zinc-200" />
                       </button>
                       
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-3">
-                          <span className="text-xl font-bold text-slate-800">
+                        <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                          <span className="text-base sm:text-xl font-bold text-slate-800 dark:text-white">
                             Öneri {currentIndex + 1}
                           </span>
-                          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                          <span className={`px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-bold ${
                             currentSuggestion.score >= 80 
-                              ? 'bg-emerald-100 text-emerald-700' 
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/50' 
                               : currentSuggestion.score >= 50 
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-red-100 text-red-700'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50'
+                                : 'bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800/50'
                           }`}>
                             {currentSuggestion.score} puan
                           </span>
                           {currentSuggestion.conflictCount > 0 && (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800/50">
                               {currentSuggestion.conflictCount} çakışma
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-medium">
                           {currentIndex + 1} / {suggestions.length}
                         </p>
                       </div>
@@ -620,9 +655,10 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       <button
                         onClick={goToNext}
                         disabled={currentIndex === suggestions.length - 1}
-                        className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 cursor-pointer"
+                        aria-label="Sonraki öneri"
                       >
-                        <ChevronRight className="h-6 w-6" />
+                        <ChevronRight className="h-5 sm:h-6 w-5 sm:w-6 text-slate-700 dark:text-zinc-200" />
                       </button>
                     </div>
                     
@@ -633,20 +669,20 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                     />
                     
                     {/* Info Bar */}
-                    <div className="flex items-center justify-between bg-slate-50 rounded-xl p-4">
-                      <div className="flex items-center gap-4 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>{currentSuggestion.summary.totalCourses} ders</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-3 sm:p-4 border border-slate-200/60 dark:border-zinc-800/60">
+                      <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-600 dark:text-zinc-300">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+                          <span className="font-semibold">{currentSuggestion.summary.totalCourses} ders</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <span>{currentSuggestion.summary.earliestStart} - {currentSuggestion.summary.latestEnd}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+                          <span className="font-semibold font-mono">{currentSuggestion.summary.earliestStart} - {currentSuggestion.summary.latestEnd}</span>
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         {currentSuggestion.summary.days.map(day => (
-                          <span key={day} className="px-2 py-0.5 bg-slate-200 rounded text-xs text-slate-600">
+                          <span key={day} className="px-2 py-0.5 bg-slate-200/80 dark:bg-zinc-800 rounded-md text-[10px] sm:text-xs font-bold text-slate-700 dark:text-zinc-300">
                             {day.substring(0, 3)}
                           </span>
                         ))}
@@ -679,7 +715,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                         return (
                           <span 
                             key={course.id} 
-                            className={`px-2 py-1 border rounded text-xs font-medium ${tagStyle}`}
+                            className={`px-2 py-1 border rounded-lg text-[11px] sm:text-xs font-bold font-mono ${tagStyle}`}
                             title={course.courseName}
                           >
                             {course.courseCode}
@@ -694,10 +730,11 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                         <button
                           key={idx}
                           onClick={() => setCurrentIndex(idx)}
+                          aria-label={`Öneri ${idx + 1}`}
                           className={`w-2 h-2 rounded-full transition-colors ${
                             idx === currentIndex 
-                              ? 'bg-violet-500' 
-                              : 'bg-slate-300 hover:bg-slate-400'
+                              ? 'bg-indigo-600' 
+                              : 'bg-slate-300 dark:bg-zinc-700 hover:bg-slate-400 dark:hover:bg-zinc-600'
                           }`}
                         />
                       ))}
@@ -709,17 +746,17 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex-shrink-0">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-slate-50 dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-900 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between">
               {step === 'config' ? (
-                <>
-                  <div className="text-sm text-slate-600">
-                    Toplam: <span className="font-bold text-slate-800">{totalRequired}</span> ders seçilecek
+                <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                  <div className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 text-center sm:text-left">
+                    Toplam: <span className="font-bold text-slate-800 dark:text-white font-mono">{totalRequired}</span> ders seçilecek
                   </div>
                   <button
                     onClick={handleGenerate}
                     disabled={totalRequired === 0 || isGenerating}
-                    className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium hover:from-violet-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md shadow-indigo-600/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isGenerating ? (
                       <>
@@ -734,24 +771,51 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       </>
                     )}
                   </button>
-                </>
+                </div>
               ) : (
-                <>
-                  <button
-                    onClick={() => setStep('config')}
-                    className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium"
-                  >
-                    ← Geri
-                  </button>
-                  <button
-                    onClick={handleApply}
-                    disabled={suggestions.length === 0}
-                    className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-medium hover:from-emerald-700 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <Check className="h-4 w-4" />
-                    Bu Programı Uygula
-                  </button>
-                </>
+                <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep('config')}
+                      className="px-3 py-2 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
+                    >
+                      ← Geri
+                    </button>
+                    {feedback && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in duration-150">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                        <span>{feedback}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {/* 1. Yeni Taslak Olarak Ekle Butonu */}
+                    <button
+                      type="button"
+                      onClick={handleApplyNewScenario}
+                      disabled={suggestions.length === 0}
+                      className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 cursor-pointer"
+                      title="Mevcut taslağı bozmadan yeni bir taslağa kaydet"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>+ Yeni Taslağa Ekle</span>
+                    </button>
+
+                    {/* 2. Mevcut Aktif Taslağa Uygula Butonu */}
+                    <button
+                      type="button"
+                      onClick={handleApplyCurrent}
+                      disabled={suggestions.length === 0}
+                      className="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                      title={`${activeScenario?.name || 'Mevcut Taslak'} üzerine uygula`}
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>{activeScenario ? `${activeScenario.name}'a Uygula` : 'Bu Programı Uygula'}</span>
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>

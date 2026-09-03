@@ -76,9 +76,11 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
     <div className="w-full max-w-2xl mx-auto">
       <div
         className={`
-          border-2 border-dashed rounded-lg p-8 text-center transition-colors
-          ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
-          ${isLoading ? 'opacity-50 pointer-events-none' : 'hover:border-blue-400'}
+          relative group border-2 border-dashed rounded-3xl p-10 text-center transition-all duration-200
+          ${isDragOver 
+            ? 'border-indigo-500 bg-indigo-500/10 shadow-xl shadow-indigo-500/10' 
+            : 'border-slate-800 bg-slate-900/60 backdrop-blur-xl hover:border-slate-700 shadow-2xl shadow-black/40'}
+          ${isLoading ? 'opacity-50 pointer-events-none' : ''}
         `}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -86,17 +88,21 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
       >
         <div className="flex flex-col items-center space-y-4">
           {isLoading ? (
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-indigo-500/30 border-t-indigo-400" />
+            </div>
           ) : (
-            <FileSpreadsheet className="h-12 w-12 text-gray-400" />
+            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 group-hover:scale-110 group-hover:border-indigo-500/40 transition-all">
+              <FileSpreadsheet className="h-10 w-10" />
+            </div>
           )}
           
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {isLoading ? 'Dosya işleniyor...' : 'Excel Dosyasını Yükleyin'}
+            <h3 className="text-xl font-bold text-white mb-1.5 tracking-tight">
+              {isLoading ? 'Dosya İşleniyor...' : 'Excel Dosyasını Sürükleyin'}
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Sunulan dersler listesini içeren Excel dosyasını sürükleyin veya seçin
+            <p className="text-sm text-slate-400 mb-6 max-w-sm mx-auto">
+              Sunulan dersler listesini içeren .xlsx veya .xls uzantılı dosyayı buraya bırakın veya cihazınızdan seçin
             </p>
             
             <input
@@ -109,24 +115,24 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
             />
             <label
               htmlFor="excel-upload"
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer transition-colors"
+              className="inline-flex items-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-medium rounded-xl shadow-md shadow-indigo-600/30 cursor-pointer transition-all gap-2"
             >
-              <Upload className="h-4 w-4 mr-2" />
+              <Upload className="h-4 w-4" />
               Dosya Seç
             </label>
           </div>
           
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-500 font-medium">
             Desteklenen formatlar: .xlsx, .xls
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+        <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/50 rounded-md">
           <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-            <p className="text-sm text-red-700">{error}</p>
+            <AlertCircle className="h-5 w-5 text-red-400 dark:text-red-400 mr-2" />
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           </div>
         </div>
       )}

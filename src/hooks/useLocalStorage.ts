@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
   // State'i initialize et
@@ -12,19 +12,22 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     }
   });
 
-  // Value setter fonksiyonu
-  const setValue = (value: T | ((val: T) => T)) => {
+  // Value setter fonksiyonu - functional updater ve useCallback ile güncel değer garantisi
+  const setValue = useCallback((value: T | ((val: T) => T)) => {
     try {
-      // Function callback'i destekle
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      
-      // localStorage'a kaydet
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      setStoredValue((current) => {
+        const valueToStore = value instanceof Function ? value(current) : value;
+        try {
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        } catch (e) {
+          console.error(`Error setting localStorage key "${key}":`, e);
+        }
+        return valueToStore;
+      });
     } catch (error) {
       console.error(`Error setting localStorage key "${key}":`, error);
     }
-  };
+  }, [key]);
 
   return [storedValue, setValue] as const;
 }

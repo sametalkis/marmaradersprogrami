@@ -64,10 +64,18 @@ export const TAG_COLORS = {
 };
 
 export const TAG_LABELS = {
-  [CourseTag.MANDATORY]: '🔴 Zorunlu',
-  [CourseTag.ELECTIVE]: '🔵 Seçmeli',
-  [CourseTag.IMPORTANT]: '🟡 Önemli', 
-  [CourseTag.OPTIONAL]: '⚪ İsteğe Bağlı'
+  [CourseTag.MANDATORY]: 'Zorunlu',
+  [CourseTag.ELECTIVE]: 'Seçmeli',
+  [CourseTag.IMPORTANT]: 'Önemli',
+  [CourseTag.OPTIONAL]: 'İsteğe Bağlı'
+};
+
+// Etiket rozetindeki renkli nokta
+export const TAG_DOTS = {
+  [CourseTag.MANDATORY]: 'bg-red-500',
+  [CourseTag.ELECTIVE]: 'bg-blue-500',
+  [CourseTag.IMPORTANT]: 'bg-amber-500',
+  [CourseTag.OPTIONAL]: 'bg-slate-400'
 };
 
 export interface ParsedSchedule {
@@ -136,3 +144,12 @@ export interface ScheduleSuggestion {
     latestEnd: string;
   };
 }
+
+// Alternatif program senaryosu / taslağı
+export interface ScheduleScenario {
+  id: string;
+  name: string;
+  courseIds: string[];
+  createdAt: number;
+}
+

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, BookOpen, Tag, Filter } from 'lucide-react';
+import { Search, BookOpen, Tag } from 'lucide-react';
 import type { Course, CustomTag } from '../types/Course';
 import { CourseStatus, CourseTag, TAG_LABELS, TAG_COLOR_PALETTE } from '../types/Course';
 import { CourseCard } from './CourseCard';
@@ -15,11 +15,12 @@ interface CourseListProps {
   showActions?: boolean;
   conflicts?: { courseId: string; message: string }[];
   compact?: boolean;
+  onHoverCourse?: (course: Course) => void;
+  onLeaveCourse?: () => void;
 }
 
 export const CourseList = ({
   courses,
-  title,
   status,
   onToggleSelect,
   onMoveToEligible,
@@ -27,7 +28,8 @@ export const CourseList = ({
   customTags = [],
   showActions = true,
   conflicts = [],
-  compact = false
+  onHoverCourse,
+  onLeaveCourse
 }: CourseListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'code' | 'name' | 'instructor'>('code');
@@ -44,7 +46,7 @@ export const CourseList = ({
     // Status'a göre filtrele
     switch (status) {
       case CourseStatus.ELIGIBLE:
-        filtered = courses.filter(course => course.isEligible && !course.isSelected);
+        filtered = courses.filter(course => course.isEligible);
         break;
       case CourseStatus.SELECTED:
         filtered = courses.filter(course => course.isSelected);
@@ -92,28 +94,26 @@ export const CourseList = ({
     return conflicts.find(conflict => conflict.courseId === courseId);
   };
 
-  // Kompakt mod
-  if (compact) {
-    return (
-      <div className="bg-white">
+  return (
+      <div className="bg-white dark:bg-black">
         {/* Kompakt Filtreler */}
-        <div className="px-2 py-2 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10 space-y-2">
+        <div className="px-2 py-2 border-b border-slate-100 dark:border-zinc-900 bg-slate-50/90 dark:bg-black/95 backdrop-blur-md sticky top-0 z-10 space-y-2">
           {/* Arama ve Sıralama */}
           <div className="flex gap-2">
             <div className="flex-1 relative">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
               <input
                 type="text"
                 placeholder="Ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'code' | 'name' | 'instructor')}
-              className="border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
             >
               <option value="code">Kod</option>
               <option value="name">Ad</option>
@@ -127,8 +127,8 @@ export const CourseList = ({
               onClick={() => setFilterTag('all')}
               className={`px-2 py-1 rounded-full text-[10px] font-medium transition-colors ${
                 filterTag === 'all' 
-                  ? 'bg-slate-700 text-white' 
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-slate-700 dark:bg-zinc-200 text-white dark:text-zinc-900 font-bold' 
+                  : 'bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-800'
               }`}
             >
               Tümü
@@ -208,6 +208,8 @@ export const CourseList = ({
                     showActions={showActions}
                     hasConflict={!!conflict}
                     conflictMessage={conflict?.message}
+                    onHover={onHoverCourse}
+                    onLeave={onLeaveCourse}
                     compact
                   />
                 );
@@ -217,87 +219,4 @@ export const CourseList = ({
         </div>
       </div>
     );
-  }
-
-  // Normal mod (eski görünüm)
-  return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Başlık */}
-      {title && (
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <BookOpen className="h-5 w-5 text-gray-500 mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-              <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">
-                {filteredAndSortedCourses.length}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filtreler */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Arama */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Ders kodu, adı veya öğretim elemanı ara..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Sıralama */}
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'code' | 'name' | 'instructor')}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="code">Ders Kodu</option>
-              <option value="name">Ders Adı</option>
-              <option value="instructor">Öğretim Elemanı</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Ders Listesi */}
-      <div className="p-6">
-        {filteredAndSortedCourses.length === 0 ? (
-          <div className="text-center py-8">
-            <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">
-              {searchTerm ? 'Arama kriterlerine uygun ders bulunamadı.' : 'Henüz ders bulunmuyor.'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            {filteredAndSortedCourses.map((course) => {
-              const conflict = getConflictForCourse(course.id);
-              return (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  onToggleSelect={onToggleSelect}
-                  onMoveToEligible={onMoveToEligible}
-                  onTagChange={onTagChange}
-                  customTags={customTags}
-                  showActions={showActions}
-                  hasConflict={!!conflict}
-                  conflictMessage={conflict?.message}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
 };
