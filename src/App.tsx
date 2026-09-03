@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  Calendar, Download, FileText, FileCode2, Wand2, BookOpen, CheckCircle, List,
+  Calendar, CalendarDays, Download, FileText, FileCode2, Wand2, BookOpen, CheckCircle, List,
   Tag, Sun, Moon, Search, Undo2, Redo2, PanelLeftClose, PanelLeftOpen, Trash2, ClipboardPaste
 } from 'lucide-react';
 import type { Course, ExcelData, ScheduleConflict, CustomTag, ScheduleScenario } from './types/Course';
@@ -14,6 +14,8 @@ import { AutoScheduleModal } from './components/AutoScheduleModal';
 import { TagManager } from './components/TagManager';
 import { CommandPalette } from './components/CommandPalette';
 import { BatchImportModal } from './components/BatchImportModal';
+import { IcsExportModal } from './components/IcsExportModal';
+import { exportToIcs, buildIcsContent } from './utils/icsExport';
 import { canAddCourse, findScheduleConflicts } from './utils/scheduleManager';
 import { exportToPDF, exportToExcel, generateScheduleSummary, downloadTextFile } from './utils/exportUtils';
 import './App.css';
@@ -87,6 +89,10 @@ function App() {
   const [isAutoScheduleModalOpen, setIsAutoScheduleModalOpen] = useState(false);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [isBatchImportOpen, setIsBatchImportOpen] = useState(false);
+
+  // .ics takvim dışa aktarma modal state'i
+  const [isIcsExportOpen, setIsIcsExportOpen] = useState(false);
+  const [icsSkippedCourses, setIcsSkippedCourses] = useState<string[]>([]);
 
   // Undo / Redo yönetimi
   const pushToHistory = useCallback((currentCourses: Course[]) => {
@@ -473,6 +479,32 @@ function App() {
     }
   };
 
+  const handleExportICS = () => {
+    // Atlanan dersler yalnızca program geçerliliğine bağlıdır; modal açılışta önizlenir
+    const { skipped } = buildIcsContent(courses.filter(c => c.isSelected), {
+      semesterStartDate: '2026-01-05',
+      weekCount: 14
+    });
+    setIcsSkippedCourses(skipped);
+    setIsIcsExportOpen(true);
+  };
+
+  const handleIcsExportConfirm = (semesterStartDate: string, weekCount: number) => {
+    try {
+      const { added, skipped } = exportToIcs(
+        courses.filter(c => c.isSelected),
+        { semesterStartDate, weekCount }
+      );
+      setIcsSkippedCourses(skipped);
+      if (added === 0) {
+        alert('Dışa aktarılacak geçerli ders programı bulunamadı.');
+      }
+    } catch (error) {
+      console.error('ICS export error:', error);
+      alert('Takvim export işlemi başarısız oldu.');
+    }
+  };
+
   const handleCloseModal = useCallback(() => {
     setIsConflictModalOpen(false);
     setPendingCourse(null);
@@ -675,6 +707,14 @@ function App() {
                   >
                     <FileCode2 className="h-3.5 w-3.5" />
                     <span>Metin</span>
+                  </button>
+                  <button
+                    onClick={handleExportICS}
+                    className="hidden lg:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl text-slate-700 dark:text-zinc-300 bg-slate-200/80 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 border border-transparent cursor-pointer active:scale-95"
+                    title="Takvim (.ics) Olarak İndir"
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    <span>Takvim</span>
                   </button>
                 </div>
               )}
@@ -986,6 +1026,14 @@ function App() {
                         <FileText className="h-3.5 w-3.5" />
                         <span>Excel</span>
                       </button>
+                      <button
+                        onClick={handleExportICS}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl text-slate-700 dark:text-zinc-300 bg-slate-200/80 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 cursor-pointer shadow-xs active:scale-95 transition-all"
+                        title="Takvim (.ics) Olarak İndir"
+                      >
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        <span>Takvim</span>
+                      </button>
                     </>
                   )}
                   {eligibleCount > 0 && (
@@ -1244,6 +1292,14 @@ function App() {
         courses={courses}
         onBatchAddToEligible={handleBatchAddToEligible}
         customTags={customTags}
+      />
+
+      {/* Takvime Aktarma (.ics) Modalı */}
+      <IcsExportModal
+        isOpen={isIcsExportOpen}
+        onClose={() => setIsIcsExportOpen(false)}
+        onConfirm={handleIcsExportConfirm}
+        skippedCourseCodes={icsSkippedCourses}
       />
     </div>
   );
