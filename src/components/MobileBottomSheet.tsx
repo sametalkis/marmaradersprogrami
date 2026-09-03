@@ -41,7 +41,7 @@ export const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
               {title}
             </h3>
             {count !== undefined && (
-              <span className="px-2 py-0.5 text-xs font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded-full font-mono">
+              <span className="inline-flex items-center justify-center min-w-[20px] px-2 py-1 text-xs leading-none font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded-full font-mono">
                 {count}
               </span>
             )}

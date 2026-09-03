@@ -761,7 +761,7 @@ function App() {
               >
                 <List className="h-3.5 w-3.5" />
                 <span>Tümü</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 font-mono">
+                <span className="inline-flex items-center justify-center min-w-[18px] text-[10px] leading-none px-1.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 font-mono">
                   {courses.length}
                 </span>
               </button>
@@ -776,7 +776,7 @@ function App() {
               >
                 <BookOpen className="h-3.5 w-3.5" />
                 <span>Uygun</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                <span className={`inline-flex items-center justify-center min-w-[18px] text-[10px] leading-none px-1.5 py-1 rounded-full font-mono ${
                   eligibleCount > 0 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold' : 'bg-slate-100 dark:bg-zinc-800'
                 }`}>
                   {eligibleCount}
@@ -793,7 +793,7 @@ function App() {
               >
                 <CheckCircle className="h-3.5 w-3.5" />
                 <span>Seçilen</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                <span className={`inline-flex items-center justify-center min-w-[18px] text-[10px] leading-none px-1.5 py-1 rounded-full font-mono ${
                   selectedCount > 0 ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-100 dark:bg-zinc-800'
                 }`}>
                   {selectedCount}
@@ -960,7 +960,7 @@ function App() {
                     {selectedCount} Ders Seçili
                   </span>
                   {selectedCount > 0 && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-black border border-indigo-200/60 dark:border-indigo-800/50 flex-shrink-0">
+                    <span className="inline-flex items-center justify-center text-[10px] leading-none px-1.5 py-1 rounded-full font-mono bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-black border border-indigo-200/60 dark:border-indigo-800/50 flex-shrink-0">
                       {courses.filter(c => c.isSelected).reduce((sum, c) => sum + (c.credits || 0), 0)} AKTS
                     </span>
                   )}
