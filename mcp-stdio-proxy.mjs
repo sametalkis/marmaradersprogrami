@@ -23,13 +23,29 @@ import path from 'node:path';
 const REMOTE_URL = process.argv[2] || 'http://localhost:8787/mcp';
 const UPLOAD_URL = REMOTE_URL.replace(/\/mcp\/?$/, '') + '/api/upload';
 
+// Cowork VM ↔ host dosya köprüsü: VM'de /mnt/user-data altına yazılan dosya
+// host'ta coworkUserFilesPath altında görünür (yapılandırma: ~/.config/Claude).
+const VM_FILES_PREFIX = '/mnt/user-data/';
+const HOST_FILES_DIR = path.join(os.homedir(), 'Claude');
+
+/** Yolu host'ta görünür hale getirir: /mnt/user-data/x → ~/Claude/x */
+function resolveHostPath(p) {
+  const expanded = p.startsWith('~') ? path.join(os.homedir(), p.slice(1)) : p;
+  if (expanded.startsWith(VM_FILES_PREFIX)) {
+    return path.join(HOST_FILES_DIR, expanded.slice(VM_FILES_PREFIX.length));
+  }
+  return expanded;
+}
+
 const INSTRUCTIONS =
   'Marmara Üniversitesi ders programı yardımcısı. ' +
   'AKIŞ: upload_courses → (extract_courses / filter_courses) → add_to_eligible + tag_courses → add_to_draft → (check_conflicts) → (generate_schedule) → get_import_link. ' +
   'Tüm tool çağrıları upload_courses\'un döndürdüğü session_id kullanır. ' +
-  'ÖNEMLİ — Excel yükleme: Kullanıcı bir dosya eklediyse veya dosya yolunu biliyorsan upload_courses\'a MUTLAKA filePath ver (örn. "/home/kullanıcı/dersler.xlsx" veya "/mnt/user-data/uploads/dosya.xlsx", ~ desteklenir). ' +
-  'base64\'e ÇEVİRME, dosyayı okumaya çalışma, cat/piping yapma — proxy dosyayı diskten okur ve yükler. ' +
-  'filePath yoksa (dosya içeriği zaten metin olarak elindeyse) fileBase64 veya courses kullan. ' +
+  'ÖNEMLİ — Excel yükleme TEK STANDART YOL (asla base64\'ü tool argümanı olarak verme, context\'i şişirir ve bozulur):\n' +
+  '1) Shell\'de dosyayı base64\'e çevirip bir DOSYAYA yaz: base64 -w0 "/mnt/user-data/uploads/dersler.xlsx" > /mnt/user-data/dersler.b64\n' +
+  '2) upload_courses\'a sadece o dosyanın yolunu ver: fileBase64Path: "/mnt/user-data/dersler.b64"\n' +
+  'Proxy dosyayı diskten okuyup decode eder; base64 hiçbir zaman model context\'inden geçmez.\n' +
+  'Alternatif: dosya yoluna doğrudan erişebiliyorsan filePath da kabul edilir (base64 adımına gerek yok). ' +
   'Etiketler (mandatory/elective/important/optional) generate_schedule önceliklendirmesinde kullanılır. ' +
   'get_import_link\'in döndürdüğü link 24 saat sonra geçersiz olur — kullanıcıya mutlaka belirtin.';
 
@@ -53,14 +69,30 @@ async function remoteRequest(method, params) {
 // ---------------------------------------------------------------------------
 
 async function localUploadCourses(args) {
-  const { filePath, fileBase64, courses } = args ?? {};
+  const { filePath, fileBase64Path, fileBase64, courses } = args ?? {};
 
   try {
-    if (filePath) {
-      const expanded = filePath.startsWith('~') ? path.join(os.homedir(), filePath.slice(1)) : filePath;
-      const buf = await fs.readFile(expanded);
+    let buf = null;
+    let sourceName = '';
+
+    if (fileBase64Path) {
+      // TEK STANDART YOL: base64 metin dosyası diskten okunur, burada decode edilir
+      const b64Path = resolveHostPath(fileBase64Path);
+      const b64Text = (await fs.readFile(b64Path, 'utf8')).replace(/\s+/g, '');
+      if (!b64Text) {
+        return { content: [{ type: 'text', text: `Base64 dosyası boş: ${fileBase64Path}` }], isError: true };
+      }
+      buf = Buffer.from(b64Text, 'base64');
+      sourceName = path.basename(fileBase64Path).replace(/\.b64$/i, '');
+    } else if (filePath) {
+      const xlsxPath = resolveHostPath(filePath);
+      buf = await fs.readFile(xlsxPath);
+      sourceName = path.basename(xlsxPath);
+    }
+
+    if (buf) {
       const form = new FormData();
-      form.append('file', new Blob([buf], { type: 'application/octet-stream' }), path.basename(expanded));
+      form.append('file', new Blob([buf], { type: 'application/octet-stream' }), sourceName || 'courses.xlsx');
       const res = await fetch(UPLOAD_URL, { method: 'POST', body: form });
       if (!res.ok) {
         const errBody = await res.text().catch(() => '');
@@ -84,17 +116,14 @@ async function localUploadCourses(args) {
   } catch (err) {
     const code = err?.code;
     if (code === 'ENOENT') {
-      // Muhtemel neden: yol Cowork VM'inin içinde (/mnt/user-data/...), proxy
-      // host'ta çalışır ve oraya erişemez. Modele doğru fallback'i söyle.
+      const tried = fileBase64Path ?? filePath ?? '';
+      const vmPath = tried.startsWith(VM_FILES_PREFIX);
       return {
         content: [{
           type: 'text',
-          text:
-            'Dosya bu makinede bulunamadı — büyük ihtimalle Cowork VM\'inin içinde ("/mnt/user-data/...") ve proxy host\'ta çalışıyor. ' +
-            'İki seçenek:\n' +
-            '1) Dosya VM\'indeyse: shell\'de şunu çalıştır ve çıktıyı fileBase64 parametresine ver: base64 -w0 "' + (args?.filePath ?? '') + '"\n' +
-            '2) Alternatif: kullanıcı dosyayı ~/Claude klasörüne kopyalarsa oradan okunabilir.\n' +
-            'Küçük dosyalarda seçenek 1 uygundur.',
+          text: vmPath
+            ? `VM yolu host'ta bulunamadı: ${tried} → ${resolveHostPath(tried)}. Cowork dosya senkronizasyonu gecikmiş olabilir; 1-2 saniye sonra tekrar dene ya da dosyayı ~/Claude/ altına yaz.`
+            : `Dosya bulunamadı: ${tried}. Kullanıcıdan dosyanın yerini doğrulamasını iste.`,
         }],
         isError: true,
       };
@@ -105,7 +134,7 @@ async function localUploadCourses(args) {
     };
   }
 
-  // filePath yoksa remote'un kendi upload_courses'una devret (fileBase64/courses yolu)
+  // fileBase64/courses yolu: remote'un kendi upload_courses'una devret
   return remoteRequest('tools/call', { name: 'upload_courses', arguments: { fileBase64, courses } });
 }
 
@@ -141,13 +170,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         title: 'Ders Kataloğu Yükle',
         description:
           'Ders kataloğunu yükler ve 24 saat geçerli session_id döndürür. ' +
-          'Kullanıcı bir dosya eklediyse/yolu biliyorsa MUTLAKA filePath kullan — dosya diskten okunur, base64 gereksiz. ' +
-          'filePath yalnızca dosya yolu biliniyorken; içeriği elinde metin olarak tutuyorsan fileBase64 ya da courses kullan.',
+          'ASLA base64\'ü tool argümanı olarak verme. İki yol: (1) fileBase64Path — base64\'ü shell\'de bir dosyaya yaz (base64 -w0 dosya.xlsx > /mnt/user-data/d.b64), buraya sadece o dosyanın yolunu ver; (2) filePath — .xlsx dosyasına doğrudan erişebiliyorsan yolu ver.',
         inputSchema: {
           type: 'object',
           properties: {
-            filePath: { type: 'string', description: 'Excel (.xlsx) dosyasının lokal yolu, örn: /mnt/user-data/uploads/dersler.xlsx (önerilen — base64\'e çevirme)' },
-            fileBase64: { type: 'string', description: 'Excel base64 — yalnızca dosya yolu yoksa' },
+            fileBase64Path: { type: 'string', description: 'Base64 metin dosyasının yolu (önerilen): base64 çıktısını shell\'de dosyaya yaz, yolunu ver. Proxy okur ve decode eder — base64 asla context\'ten geçmez.' },
+            filePath: { type: 'string', description: 'Excel (.xlsx) dosyasının doğrudan yolu — erişebiliyorsan base64 adımı gereksiz' },
             courses: {
               type: 'array',
               description: 'Parse edilmiş ders listesi (Excel metin olarak verildiyse)',
