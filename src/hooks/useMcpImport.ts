@@ -58,8 +58,9 @@ export const useMcpImport = (
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('import_session');
     const draftName = params.get('draft');
+    const allDrafts = params.get('all_drafts') === '1';
 
-    if (!sessionId || !draftName) return;
+    if (!sessionId || (!draftName && !allDrafts)) return;
     ranRef.current = true;
 
     // Refresh'te tekrar tetiklenmesin diye parametreleri hemen temizle
@@ -74,7 +75,10 @@ export const useMcpImport = (
 
     const run = async () => {
       try {
-        const res = await fetch(`/api/session?import_session=${encodeURIComponent(sessionId)}&draft=${encodeURIComponent(draftName)}`);
+        const query = allDrafts
+          ? `import_session=${encodeURIComponent(sessionId)}&all_drafts=1`
+          : `import_session=${encodeURIComponent(sessionId)}&draft=${encodeURIComponent(draftName ?? '')}`;
+        const res = await fetch(`/api/session?${query}`);
         if (!res.ok) {
           const errorMessage = res.status === 404
             ? 'Bu içe aktarma linkinin süresi dolmuş (24 saat) veya taslak bulunamadı.'

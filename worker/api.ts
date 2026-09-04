@@ -3,6 +3,10 @@
  *
  * Frontend, ?import_session=<uuid>[&draft=<name>] linkiyle açıldığında
  * buraya fetch atar. Yazma/silme YOK — yazma işi MCP tool'larına ait.
+ *
+ * ?draft=<ad>        → o draftın course_codes + marks
+ * ?all_drafts=1      → session'daki TÜM draftlar birleştirilmiş + marks
+ *                      (draft adı verilmeyince bu kullanılır)
  */
 
 import type { Env } from './index';
@@ -11,6 +15,7 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
   const url = new URL(request.url);
   const sessionId = url.searchParams.get('import_session');
   const draftName = url.searchParams.get('draft');
+  const allDrafts = url.searchParams.get('all_drafts') === '1';
 
   if (!sessionId) {
     return new Response(JSON.stringify({ error: 'missing_session_id' }), {
@@ -40,6 +45,51 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
       env.SCHEDULE_KV.get(key),
       env.SCHEDULE_KV.get(`${sessionId}:state`),
     ]);
+
+    // Tek link = tüm draftlar: session state'teki draft dizinini oku,
+    // her draftın course_codes'larını birleştir (sıra korunur, tekrarsız)
+    if (allDrafts && stateRaw) {
+      const state = JSON.parse(stateRaw) as { marks?: Record<string, { eligible?: boolean; tag?: string }>; drafts?: string[] };
+      const draftNames = (state.drafts ?? []).filter(d => /^[a-zA-Z0-9çğıöşüÇĞİÖŞÜ _-]{1,64}$/.test(d));
+      const merged: string[] = [];
+      const seen = new Set<string>();
+      const perDraft: { name: string; count: number }[] = [];
+      await Promise.all(draftNames.map(async name => {
+        const raw = await env.SCHEDULE_KV.get(`${sessionId}:draft:${name}`);
+        if (!raw) return;
+        try {
+          const d = JSON.parse(raw) as { course_codes?: string[] };
+          return (d.course_codes ?? []).filter((c): c is string => typeof c === 'string');
+        } catch {
+          return [];
+        }
+      })).then(results => {
+        results.forEach((codes, i) => {
+          const safe = codes ?? [];
+          const fresh = safe.filter(c => !seen.has(c));
+          fresh.forEach(c => seen.add(c));
+          merged.push(...fresh);
+          perDraft.push({ name: draftNames[i], count: fresh.length });
+        });
+      });
+      if (merged.length === 0 && state.marks && Object.keys(state.marks).length === 0) {
+        return new Response(JSON.stringify({ error: 'expired_or_not_found' }), {
+          status: 404,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      const marks = state.marks ?? {};
+      return new Response(JSON.stringify({
+        course_codes: merged,
+        drafts: perDraft,
+        marks,
+      }), {
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+        },
+      });
+    }
 
     if (data === null) {
       return new Response(JSON.stringify({ error: 'expired_or_not_found' }), {

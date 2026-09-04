@@ -103,18 +103,23 @@ interface CourseMark {
 
 interface SessionState {
   marks: Record<string, CourseMark>;
+  /** Bu session'da yaratılmış draft adları (tek linkte tümünü import etmek için) */
+  drafts: string[];
 }
 
 const stateKey = (sessionId: string) => `${sessionId}:state`;
 
 async function readState(env: Env, sessionId: string): Promise<SessionState> {
   const raw = await env.SCHEDULE_KV.get(stateKey(sessionId));
-  if (!raw) return { marks: {} };
+  if (!raw) return { marks: {}, drafts: [] };
   try {
     const parsed = JSON.parse(raw) as Partial<SessionState>;
-    return { marks: parsed.marks && typeof parsed.marks === 'object' ? parsed.marks : {} };
+    return {
+      marks: parsed.marks && typeof parsed.marks === 'object' ? parsed.marks : {},
+      drafts: Array.isArray(parsed.drafts) ? parsed.drafts.filter((d): d is string => typeof d === 'string') : [],
+    };
   } catch {
-    return { marks: {} };
+    return { marks: {}, drafts: [] };
   }
 }
 
@@ -127,6 +132,12 @@ async function writeDraft(env: Env, sessionId: string, draftName: string, codes:
   await env.SCHEDULE_KV.put(draftKey(sessionId, draftName), JSON.stringify(file), {
     expirationTtl: TTL_SECONDS,
   });
+  // Draft dizinini güncelle (tek link = tüm draftlar akışı için)
+  const state = await readState(env, sessionId);
+  if (!state.drafts.includes(draftName)) {
+    state.drafts.push(draftName);
+    await writeState(env, sessionId, state);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -744,40 +755,81 @@ function createMcpServer(env: Env): McpServer {
   // ---- get_import_link -----------------------------------------------------
   server.registerTool('get_import_link', {
     title: 'İçe Aktarma Linki Al',
-    description: 'Taslağı uygulamaya aktarmak için tek kullanımlık link üretir. Link 24 saat geçerlidir; kullanıcıya mutlaka iletin.',
+    description:
+      'Taslağı(ları) uygulamaya aktarmak için link üretir. Link 24 saat geçerlidir; kullanıcıya mutlaka iletin. ' +
+      'draft_name verilirse yalnızca o taslak; verilmezse session\'daki TÜM taslaklar tek linkte birleştirilir (önerilen kapanış adımı).',
     inputSchema: {
       session_id: z.string().uuid(),
-      draft_name: z.string().min(1).max(64),
+      draft_name: z.string().min(1).max(64).optional().describe('Tek bir taslak aktarılacaksa adı; boş bırakılırsa tüm taslaklar birleştirilir'),
     },
   }, async ({ session_id, draft_name }) => {
     if (!UUID_RE.test(session_id)) {
       return { content: [{ type: 'text', text: 'Geçersiz session_id formatı.' }], isError: true };
     }
-    const draft = await readDraft(env, session_id, draft_name);
 
-    if (!draft) {
+    // Tek draft modu
+    if (draft_name) {
+      const draft = await readDraft(env, session_id, draft_name);
+      if (!draft) {
+        return {
+          content: [{ type: 'text', text: `Draft "${draft_name}" bulunamadı. Önce add_to_draft ile ders ekleyin.` }],
+          isError: true,
+        };
+      }
+      if (draft.course_codes.length === 0) {
+        return {
+          content: [{ type: 'text', text: `Draft "${draft_name}" boş. Önce add_to_draft ile ders ekleyin.` }],
+          isError: true,
+        };
+      }
+      const link = `${BASE_URL}/?import_session=${session_id}&draft=${encodeURIComponent(draft_name)}`;
       return {
-        content: [{ type: 'text', text: `Draft "${draft_name}" bulunamadı. Önce add_to_draft ile ders ekleyin.` }],
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            import_link: link,
+            draft_name,
+            course_count: draft.course_codes.length,
+            expires_in_hours: 24,
+            note: 'Bu linki kullanıcıya iletin; 24 saat sonra geçersiz olur. Kullanıcı linke tıklayınca dersler uygulamasındaki taslağa aktarılır.',
+          }, null, 2),
+        }],
+      };
+    }
+
+    // Tüm draftlar modu — tek link, birleştirilmiş course_codes
+    const state = await readState(env, session_id);
+    const drafts = state.drafts;
+    if (drafts.length === 0) {
+      return {
+        content: [{ type: 'text', text: 'Bu session\'da taslak yok. Önce add_to_draft ile ders ekleyin (veya draft_name verin).' }],
         isError: true,
       };
     }
-    if (draft.course_codes.length === 0) {
+    const perDraft = await Promise.all(drafts.map(async name => {
+      const d = await readDraft(env, session_id, name);
+      return { name, count: d?.course_codes.length ?? 0 };
+    }));
+    const totalCount = perDraft.reduce((s, d) => s + d.count, 0);
+    if (totalCount === 0) {
       return {
-        content: [{ type: 'text', text: `Draft "${draft_name}" boş. Önce add_to_draft ile ders ekleyin.` }],
+        content: [{ type: 'text', text: 'Session\'daki taslakların tümü boş. Önce add_to_draft ile ders ekleyin.' }],
         isError: true,
       };
     }
-
-    const link = `${BASE_URL}/?import_session=${session_id}&draft=${encodeURIComponent(draft_name)}`;
+    const markCount = Object.keys(state.marks).length;
+    const link = `${BASE_URL}/?import_session=${session_id}&all_drafts=1`;
     return {
       content: [{
         type: 'text',
         text: JSON.stringify({
           import_link: link,
-          draft_name,
-          course_count: draft.course_codes.length,
+          mode: 'all_drafts',
+          drafts: perDraft,
+          course_count: totalCount,
+          marked_course_count: markCount,
           expires_in_hours: 24,
-          note: 'Bu linki kullanıcıya iletin; 24 saat sonra geçersiz olur. Kullanıcı linke tıklayınca dersler uygulamasındaki taslağa aktarılır.',
+          note: 'Bu link session\'daki TÜM taslakları tek seferde aktarır. Kullanıcıya iletin; 24 saat sonra geçersiz olur.',
         }, null, 2),
       }],
     };
