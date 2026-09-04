@@ -14,6 +14,8 @@ import { getBaseCourseCode } from '../utils/scheduleGenerator';
 interface DraftResponse {
   course_codes?: string[];
   updated_at?: string;
+  /** Koda göre eligible/tag işaretleri (MCP session state'inden) */
+  marks?: Record<string, { eligible?: boolean; tag?: string }>;
 }
 
 export interface McpImportState {
@@ -83,19 +85,46 @@ export const useMcpImport = (
         // Katalogla eşleştir (birebir, sonra base kod: "BUS3002.1" ≈ "BUS3002")
         const matchedIds = new Set<string>();
         const notFoundCodes: string[] = [];
+        // Kod → { eligible, tag } işaretleri; katalog eşleşmesiyle birleştirilir
+        const marksByCourseId = new Map<string, { eligible?: boolean; tag?: string }>();
+        const marks = draft.marks ?? {};
+
         for (const code of codes) {
           const wanted = code.trim().toLowerCase();
           const match = courses.find(c => c.courseCode.toLowerCase() === wanted) ||
             courses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === wanted);
-          if (match) matchedIds.add(match.id);
-          else notFoundCodes.push(code);
+          if (match) {
+            matchedIds.add(match.id);
+            const mark = marks[match.courseCode];
+            if (mark) marksByCourseId.set(match.id, mark);
+          } else {
+            notFoundCodes.push(code);
+          }
+        }
+
+        // Marks'ta olup draft'ta olmayan dersler de (sadece eligible/tag atanmış)
+        // uygulanır — add_to_eligible akışı draft gerektirmez
+        for (const [code, mark] of Object.entries(marks)) {
+          if (!mark.eligible && !mark.tag) continue;
+          const match = courses.find(c => c.courseCode.toLowerCase() === code.toLowerCase()) ||
+            courses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === code.toLowerCase());
+          if (match && !matchedIds.has(match.id)) {
+            matchedIds.add(match.id);
+            marksByCourseId.set(match.id, mark);
+          }
         }
 
         if (matchedIds.size > 0) {
-          // Uygunluk havuzu bozulmadan seçim işaretlenir
-          setCourses(prev => prev.map(c =>
-            matchedIds.has(c.id) ? { ...c, isSelected: true, isEligible: true } : c
-          ));
+          setCourses(prev => prev.map(c => {
+            if (!matchedIds.has(c.id)) return c;
+            const mark = marksByCourseId.get(c.id);
+            return {
+              ...c,
+              isSelected: true,
+              isEligible: true,
+              ...(mark?.tag ? { tag: mark.tag } : {}),
+            };
+          }));
         }
 
         setState({

@@ -8,6 +8,7 @@
  *
  * Session durumu KV'de (24 saat TTL) tutulur:
  *   <session_id>                 → Course[] (upload_courses yazar)
+ *   <session_id>:state           → { marks: { [kod]: { eligible, tag } } } (add_to_eligible/tag_courses yazar)
  *   <session_id>:draft:<name>    → { course_codes, updated_at } (add_to_draft yazar)
  *
  * Kod tekrarı yok: parse/çakışma/generatör mantığı src/'ten import edilir.
@@ -21,6 +22,7 @@ import type { Course } from '../src/types/Course';
 import { CourseTag } from '../src/types/Course';
 import { parseAllSchedules } from '../src/utils/excelParser';
 import { parseExcelFileFromBase64 } from './excelParserWorker';
+import { extractCourseCodes, matchCoursesWithCodes } from '../src/utils/courseCodeExtractor';
 import {
   getBaseCourseCode,
   generateScheduleSuggestions,
@@ -31,6 +33,8 @@ const TTL_SECONDS = 86400; // 24 saat
 const MAX_FILTER_RESULTS = 30;
 const MAX_SUGGESTIONS = 5;
 const BASE_URL = 'https://marmaradersprogrami.sametalkis.me';
+
+const VALID_TAGS = new Set<string>(Object.values(CourseTag));
 
 export interface Env {
   SCHEDULE_KV: KVNamespace;
@@ -87,6 +91,36 @@ async function readDraft(env: Env, sessionId: string, draftName: string): Promis
 
 /** Draft KV key şablonu tek yerde: "<session>:draft:<name>" */
 const draftKey = (sessionId: string, draftName: string) => `${sessionId}:draft:${draftName}`;
+
+// ---------------------------------------------------------------------------
+// Session state (eligible/tag işaretleri) — import akışında uygulamaya taşınır
+// ---------------------------------------------------------------------------
+
+interface CourseMark {
+  eligible?: boolean;
+  tag?: string;
+}
+
+interface SessionState {
+  marks: Record<string, CourseMark>;
+}
+
+const stateKey = (sessionId: string) => `${sessionId}:state`;
+
+async function readState(env: Env, sessionId: string): Promise<SessionState> {
+  const raw = await env.SCHEDULE_KV.get(stateKey(sessionId));
+  if (!raw) return { marks: {} };
+  try {
+    const parsed = JSON.parse(raw) as Partial<SessionState>;
+    return { marks: parsed.marks && typeof parsed.marks === 'object' ? parsed.marks : {} };
+  } catch {
+    return { marks: {} };
+  }
+}
+
+async function writeState(env: Env, sessionId: string, state: SessionState): Promise<void> {
+  await env.SCHEDULE_KV.put(stateKey(sessionId), JSON.stringify(state), { expirationTtl: TTL_SECONDS });
+}
 
 async function writeDraft(env: Env, sessionId: string, draftName: string, codes: string[]): Promise<void> {
   const file: DraftFile = { course_codes: codes, updated_at: new Date().toISOString() };
@@ -225,8 +259,9 @@ function createMcpServer(env: Env): McpServer {
     {
       instructions:
         'Marmara Üniversitesi ders programı yardımcısı. ' +
-        'Akış: upload_courses → (filter_courses) → add_to_draft → (check_conflicts) → (generate_schedule) → get_import_link. ' +
+        'Akış: upload_courses → (extract_courses / filter_courses) → add_to_eligible + tag_courses → add_to_draft → (check_conflicts) → (generate_schedule) → get_import_link. ' +
         'Tüm tool çağrıları upload_courses\'un döndürdüğü session_id kullanır. ' +
+        'Etiketler (mandatory/elective/important/optional) generate_schedule önceliklendirmesinde kullanılır. ' +
         'get_import_link\'in döndürdüğü link 24 saat sonra geçersiz olur — kullanıcıya mutlaka belirtin.',
     }
   );
@@ -325,6 +360,162 @@ function createMcpServer(env: Env): McpServer {
           returned: Math.min(filtered.length, MAX_FILTER_RESULTS),
           truncated: filtered.length > MAX_FILTER_RESULTS,
           courses: filtered.slice(0, MAX_FILTER_RESULTS).map(courseSummary),
+        }, null, 2),
+      }],
+    };
+  });
+
+  // ---- extract_courses -----------------------------------------------------
+  server.registerTool('extract_courses', {
+    title: 'Metinden Ders Çıkar',
+    description: 'Serbest metinden (müfredat, Word/PDF kopyası, web sayfası vb.) üniversite ders kodlarını çıkarır ve katalogla eşleştirir. Toplu ders eklemede ilk adım.',
+    inputSchema: {
+      session_id: z.string().uuid(),
+      text: z.string().min(1).max(50000).describe('Ders kodlarının geçtiği serbest metin'),
+    },
+  }, async ({ session_id, text }) => {
+    if (!UUID_RE.test(session_id)) {
+      return { content: [{ type: 'text', text: 'Geçersiz session_id formatı.' }], isError: true };
+    }
+    const courses = await getSessionCourses(env, session_id);
+    if (!courses) return sessionNotFound();
+
+    // src/utils/courseCodeExtractor ile aynı regex/mantık (tek kaynak)
+    const codes = extractCourseCodes(text);
+    const result = matchCoursesWithCodes(codes, courses);
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          total_extracted: result.totalExtractedCodes,
+          matched_base_codes: result.matchedCodes.map(m => ({
+            code: m.normalizedCode,
+            sections: m.matchedCourses.map(courseSummary),
+          })),
+          unmatched_codes: result.unmatchedCodes,
+          total_matched_courses: result.totalMatchedCourses,
+          matched_course_codes: courses
+            .filter(c => result.allMatchedCourseIds.includes(c.id))
+            .map(c => c.courseCode),
+        }, null, 2),
+      }],
+    };
+  });
+
+  // ---- add_to_eligible -----------------------------------------------------
+  server.registerTool('add_to_eligible', {
+    title: 'Uygunluk Havuzuna Ekle',
+    description: 'Dersleri uygun (seçilebilir) havuza ekler ve opsiyonel etiket atar. Etiketler: mandatory (Zorunlu), elective (Seçmeli), important (Önemli), optional (İsteğe Bağlı). Etiketler generate_schedule\'ın ders önceliklendirmesinde kullanılır.',
+    inputSchema: {
+      session_id: z.string().uuid(),
+      course_codes: z.array(z.string()).min(1).describe('Uygun havuza eklenecek ders kodları'),
+      tag: z.enum(['mandatory', 'elective', 'important', 'optional']).optional().describe('Tüm eklenenlere atanacak etiket'),
+    },
+  }, async ({ session_id, course_codes, tag }) => {
+    if (!UUID_RE.test(session_id)) {
+      return { content: [{ type: 'text', text: 'Geçersiz session_id formatı.' }], isError: true };
+    }
+    const courses = await getSessionCourses(env, session_id);
+    if (!courses) return sessionNotFound();
+
+    const state = await readState(env, session_id);
+    const added: string[] = [];
+    const notFound: string[] = [];
+
+    for (const code of course_codes) {
+      const course = findCourseByCode(courses, code);
+      if (!course) {
+        notFound.push(code);
+        continue;
+      }
+      const mark = state.marks[course.courseCode] || {};
+      mark.eligible = true;
+      if (tag) mark.tag = tag;
+      state.marks[course.courseCode] = mark;
+      added.push(course.courseCode);
+    }
+
+    if (notFound.length > 0 && added.length === 0) {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ added: false, reason: 'not_found', not_found: notFound }, null, 2) }],
+        isError: true,
+      };
+    }
+
+    await writeState(env, session_id, state);
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          added,
+          not_found: notFound.length > 0 ? notFound : undefined,
+          tag: tag ?? undefined,
+          message: tag
+            ? `${added.length} ders uygun havuza eklendi ve "${tag}" etiketi atandı.`
+            : `${added.length} ders uygun havuza eklendi.`,
+        }, null, 2),
+      }],
+    };
+  });
+
+  // ---- tag_courses ---------------------------------------------------------
+  server.registerTool('tag_courses', {
+    title: 'Dersleri Etiketle',
+    description: 'Derslere etiket atar veya kaldırır. Etiketler: mandatory (Zorunlu), elective (Seçmeli), important (Önemli), optional (İsteğe Bağlı).',
+    inputSchema: {
+      session_id: z.string().uuid(),
+      course_codes: z.array(z.string()).min(1).describe('Etiketlenecek ders kodları'),
+      tag: z.enum(['mandatory', 'elective', 'important', 'optional']).nullable().optional().describe('Atanacak etiket; null = etiketi kaldır'),
+    },
+  }, async ({ session_id, course_codes, tag }) => {
+    if (!UUID_RE.test(session_id)) {
+      return { content: [{ type: 'text', text: 'Geçersiz session_id formatı.' }], isError: true };
+    }
+    if (tag !== undefined && tag !== null && !VALID_TAGS.has(tag)) {
+      return { content: [{ type: 'text', text: `Geçersiz etiket: ${tag}` }], isError: true };
+    }
+    const courses = await getSessionCourses(env, session_id);
+    if (!courses) return sessionNotFound();
+
+    const state = await readState(env, session_id);
+    const updated: string[] = [];
+    const notFound: string[] = [];
+
+    for (const code of course_codes) {
+      const course = findCourseByCode(courses, code);
+      if (!course) {
+        notFound.push(code);
+        continue;
+      }
+      const mark = state.marks[course.courseCode] || {};
+      if (tag === null) {
+        delete mark.tag;
+      } else if (tag !== undefined) {
+        mark.tag = tag;
+        mark.eligible = true; // etiket atamak havuza da ekler (uygulama davranışıyla uyumlu)
+      }
+      state.marks[course.courseCode] = mark;
+      updated.push(course.courseCode);
+    }
+
+    if (notFound.length > 0 && updated.length === 0) {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ updated: false, reason: 'not_found', not_found: notFound }, null, 2) }],
+        isError: true,
+      };
+    }
+
+    await writeState(env, session_id, state);
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          updated,
+          tag: tag ?? null,
+          not_found: notFound.length > 0 ? notFound : undefined,
         }, null, 2),
       }],
     };
@@ -460,17 +651,24 @@ function createMcpServer(env: Env): McpServer {
   // ---- generate_schedule ---------------------------------------------------
   server.registerTool('generate_schedule', {
     title: 'Program Üret',
-    description: 'Seçilen derslerle çakışmasız haftalık program kombinasyonları üretir (en iyi 5). Derslerin katalogda yüklü olması gerekir.',
+    description: 'Seçilen derslerle çakışmasız haftalık program kombinasyonları üretir (en iyi 5). Etiket dağılımı (requirements) verilmezse tüm seçilen dersler programa girmeye çalışır. Ders etiketleri session state\'inden (add_to_eligible/tag_courses) okunur.',
     inputSchema: {
       session_id: z.string().uuid(),
-      selected_course_codes: z.array(z.string()).min(1).describe('Programa girecek ders kodları'),
+      selected_course_codes: z.array(z.string()).min(1).describe('Programa girebilecek ders kodları'),
+      requirements: z.object({
+        mandatory: z.number().int().min(0).optional(),
+        elective: z.number().int().min(0).optional(),
+        important: z.number().int().min(0).optional(),
+        optional: z.number().int().min(0).optional(),
+      }).optional().describe('Etiket başına programda olmasını istenen ders sayısı; verilmezse tüm seçilen dersler programa girer'),
     },
-  }, async ({ session_id, selected_course_codes }) => {
+  }, async ({ session_id, selected_course_codes, requirements }) => {
     if (!UUID_RE.test(session_id)) {
       return { content: [{ type: 'text', text: 'Geçersiz session_id formatı.' }], isError: true };
     }
     const courses = await getSessionCourses(env, session_id);
     if (!courses) return sessionNotFound();
+    const state = await readState(env, session_id);
 
     const selected: Course[] = [];
     const notFound: string[] = [];
@@ -486,15 +684,31 @@ function createMcpServer(env: Env): McpServer {
       };
     }
 
-    // Generator yalnızca etiketli derslerle çalışır; MCP akışında kullanıcı
-    // elle etiketlemediği için hepsi zorunlu sayılır ve istenen sayıda alınır.
-    const tagged = selected.map(c => ({ ...c, isEligible: true, tag: CourseTag.MANDATORY }));
+    // Generator yalnızca etiketli derslerle çalışır. Etiketler session state'ten
+    // okunur; etiketsiz kalanlar mandatory sayılır (etiketsiz ders de programa
+    // girebilsin diye). requirements verilmezse her etiketten tümü istenir.
+    const tagOf = (c: Course): CourseTag => {
+      const mark = state.marks[c.courseCode];
+      return (mark?.tag as CourseTag) ?? CourseTag.MANDATORY;
+    };
+    const tagged = selected.map(c => ({ ...c, isEligible: true, tag: tagOf(c) }));
+    const counts: Record<string, number> = {};
+    for (const c of tagged) counts[c.tag as string] = (counts[c.tag as string] || 0) + 1;
+
+    const prefsReq: Record<string, number> = {
+      [CourseTag.MANDATORY]: 0, [CourseTag.ELECTIVE]: 0, [CourseTag.IMPORTANT]: 0, [CourseTag.OPTIONAL]: 0,
+    };
+    if (requirements) {
+      for (const [key, value] of Object.entries(requirements)) {
+        if (typeof value === 'number') prefsReq[key] = value;
+      }
+    } else {
+      for (const [key, value] of Object.entries(counts)) prefsReq[key] = value;
+    }
+
     const preferences = {
       ...defaultPreferences,
-      requirements: {
-        ...defaultPreferences.requirements,
-        [CourseTag.MANDATORY]: tagged.length,
-      },
+      requirements: prefsReq as typeof defaultPreferences.requirements,
     };
 
     const suggestions = generateScheduleSuggestions(tagged, preferences).slice(0, MAX_SUGGESTIONS);

@@ -125,20 +125,24 @@ Uygulama, AI ajanlarının (Claude Desktop, Cursor vb.) ders kataloğu üzerinde
 |---|---|
 | `upload_courses` | Excel (base64) veya hazır ders listesini yükler → 24 saat geçerli `session_id` |
 | `filter_courses` | Katalogda kod/ad/öğretim üyesi/departman/gün filtresi (max 30 sonuç) |
+| `extract_courses` | Serbest metinden (müfredat, Word/PDF kopyası vb.) ders kodu çıkarıp katalogla eşleştirir |
+| `add_to_eligible` | Dersleri uygunluk havuzuna ekler + opsiyonel etiket atar |
+| `tag_courses` | Derslere etiket atar/kaldırır (mandatory, elective, important, optional) |
 | `add_to_draft` | Dersleri taslağa ekler; çakışma varsa `confirm_add: true` ister |
 | `check_conflicts` | Taslaktaki zaman çakışmalarını raporlar |
-| `generate_schedule` | Çakışmasız program kombinasyonları üretir (en iyi 5) |
+| `generate_schedule` | Çakışmasız program kombinasyonları üretir (en iyi 5); opsiyonel `requirements` ile etiket başına ders sayısı |
 | `get_import_link` | Taslağı uygulamaya aktaran `?import_session=...&draft=...` linkini üretir (24 saat geçerli) |
 
 ### Kullanıcı Akışı
 
 ```
-upload_courses → filter_courses → add_to_draft → check_conflicts → get_import_link
-                                                                          |
-        +-----------------------------------------------------------------+
+upload_courses → extract_courses / filter_courses → add_to_eligible + tag_courses
+             → add_to_draft → check_conflicts → generate_schedule → get_import_link
+                                                                           |
+        +------------------------------------------------------------------+
         | Kullanıcı linke tıklar: /?import_session=<uuid>&draft=<ad>
         v
-Frontend /api/session'u okur -> katalogla eşleştirir -> dersleri seçili işaretler
+Frontend /api/session'u okur -> katalogla eşleştirir -> seçim + etiketleri uygular
 ```
 
 ### Claude Desktop Bağlama

@@ -22,5 +22,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["worker", "src/types", "src/utils/excelParser.ts", "src/utils/scheduleGenerator.ts"]
+  "include": ["worker", "src/types", "src/utils/excelParser.ts", "src/utils/scheduleGenerator.ts", "src/utils/courseCodeExtractor.ts"]
 }

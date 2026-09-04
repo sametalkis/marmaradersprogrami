@@ -35,13 +35,37 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
   const key = safeDraft ? `${sessionId}:draft:${safeDraft}` : sessionId;
 
   try {
-    const data = await env.SCHEDULE_KV.get(key);
+    // Session state (eligible/tag işaretleri) her zaman yanına eklenir
+    const [data, stateRaw] = await Promise.all([
+      env.SCHEDULE_KV.get(key),
+      env.SCHEDULE_KV.get(`${sessionId}:state`),
+    ]);
+
     if (data === null) {
       return new Response(JSON.stringify({ error: 'expired_or_not_found' }), {
         status: 404,
         headers: { 'content-type': 'application/json' },
       });
     }
+
+    // Draft key'i: course_codes + marks birleştir; düz session key'i: ham Course[]
+    if (safeDraft) {
+      const draft = JSON.parse(data) as { course_codes?: string[]; updated_at?: string };
+      const state = stateRaw
+        ? (JSON.parse(stateRaw) as { marks?: Record<string, { eligible?: boolean; tag?: string }> })
+        : { marks: {} };
+      return new Response(JSON.stringify({
+        course_codes: draft.course_codes ?? [],
+        updated_at: draft.updated_at,
+        marks: state.marks ?? {},
+      }), {
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+        },
+      });
+    }
+
     return new Response(data, {
       headers: {
         'content-type': 'application/json',
