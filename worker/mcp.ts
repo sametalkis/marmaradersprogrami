@@ -276,6 +276,9 @@ function createMcpServer(env: Env): McpServer {
         'Bunun yerine shell\'den: curl -sf -X POST ' + BASE_URL + '/api/upload -F "file=@DOSYA.xlsx" — dönen session_id doğrudan kullanılabilir. ' +
         'fileBase64 yalnızca dosyaya erişimin yoksa ve içeriği zaten metin olarak görüyorsan kullanılmalıdır (büyük dosyalarda pahalıdır). ' +
         'Etiketler (mandatory/elective/important/optional) generate_schedule önceliklendirmesinde kullanılır. ' +
+        'ÖNEMLİ — Draftlar: Her plan/alternatif/kategori için AYRI draft oluşturun; ' +
+        'add_to_draft\'u her grup için ayrı ayrı, kendi draft_name\'i ile çağırın (örn. "Plan-1A", "Plan-1B-Seçmeliler"). ' +
+        'Aynı drafta farklı planları karıştırmayın — import linki her draftı uygulamada ayrı taslak olarak açar. ' +
         'get_import_link\'in döndürdüğü link 24 saat sonra geçersiz olur — kullanıcıya mutlaka belirtin.',
     }
   );
@@ -538,7 +541,7 @@ function createMcpServer(env: Env): McpServer {
   // ---- add_to_draft --------------------------------------------------------
   server.registerTool('add_to_draft', {
     title: 'Taslağa Ders Ekle',
-    description: 'Dersleri adlandırılmış taslağa ekler. Çakışma tespit edilirse confirm_add olmadan eklemez; çakışan çiftleri listeler.',
+    description: 'Dersleri adlandırılmış taslağa ekler. Her plan/alternatif için AYRI draft oluşturun (örn. "Plan-1A", "Plan-1B-Seçmeliler"); planları tek draftta karıştırmayın. Çakışma tespit edilirse confirm_add olmadan eklemez; çakışan çiftleri listeler.',
     inputSchema: {
       session_id: z.string().uuid(),
       draft_name: z.string().min(1).max(64).describe('Taslak adı, örn: "Bahar 2026"'),
@@ -757,7 +760,8 @@ function createMcpServer(env: Env): McpServer {
     title: 'İçe Aktarma Linki Al',
     description:
       'Taslağı(ları) uygulamaya aktarmak için link üretir. Link 24 saat geçerlidir; kullanıcıya mutlaka iletin. ' +
-      'draft_name verilirse yalnızca o taslak; verilmezse session\'daki TÜM taslaklar tek linkte birleştirilir (önerilen kapanış adımı).',
+      'draft_name verilirse yalnızca o taslak; verilmezse session\'daki TÜM taslaklar tek linkle aktarılır ve ' +
+      'uygulamada her taslak kendi adıyla AYRI bir plan (senaryo) olarak açılır (önerilen kapanış adımı).',
     inputSchema: {
       session_id: z.string().uuid(),
       draft_name: z.string().min(1).max(64).optional().describe('Tek bir taslak aktarılacaksa adı; boş bırakılırsa tüm taslaklar birleştirilir'),

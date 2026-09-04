@@ -6,13 +6,14 @@
  * ve KATALOGU çeker. Katalog boşsa (link ile ilk kez gelen kullanıcı —
  * localStorage'da ders yok) katalog cevaptan yüklenir; böylece import
  * linki sıfır veriyle açılan sitede de doğrudan çalışır. Sonra kodlar
- * katalogla eşleştirilir ve eşleşenler seçili işaretlenir. URL
+ * katalogla eşleştirilir ve her draft uygulama tarafında AYRI bir taslak
+ * (senaryo) olarak oluşturulur; ilk taslak aktif seçilir. URL
  * parametreleri history.replaceState ile temizlenir (refresh'te tekrar
  * tetiklenmesin).
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { Course } from '../types/Course';
+import type { Course, ScheduleScenario } from '../types/Course';
 import { getBaseCourseCode } from '../utils/scheduleGenerator';
 
 interface DraftResponse {
@@ -22,6 +23,8 @@ interface DraftResponse {
   marks?: Record<string, { eligible?: boolean; tag?: string }>;
   /** Tam katalog — link ile ilk kez gelen kullanıcının localStorage'ı boş olur */
   courses?: Course[];
+  /** all_drafts modunda her draftın adı + kodları (app'te ayrı senaryo olur) */
+  drafts?: { name: string; course_codes?: string[] }[];
 }
 
 export interface McpImportState {
@@ -42,9 +45,30 @@ export interface McpImportState {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+type ScenarioUpdater = (updater: (prev: ScheduleScenario[]) => ScheduleScenario[]) => void;
+
+/** Kod listesini katalogla eşleştir (birebir, sonra base kod: "BUS3002.1" ≈ "BUS3002") */
+const matchCodes = (codes: string[], pool: Course[]) => {
+  const matchedIds = new Set<string>();
+  const notFoundCodes: string[] = [];
+  for (const code of codes) {
+    const wanted = code.trim().toLowerCase();
+    const match = pool.find(c => c.courseCode.toLowerCase() === wanted) ||
+      pool.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === wanted);
+    if (match) {
+      matchedIds.add(match.id);
+    } else {
+      notFoundCodes.push(code);
+    }
+  }
+  return { matchedIds, notFoundCodes };
+};
+
 export const useMcpImport = (
   courses: Course[],
-  setCourses: (updater: (prev: Course[]) => Course[]) => void
+  setCourses: (updater: (prev: Course[]) => Course[]) => void,
+  setScenarios?: ScenarioUpdater,
+  setActiveScenarioId?: (id: string) => void,
 ): McpImportState => {
   const [state, setState] = useState<McpImportState>({
     status: 'idle',
@@ -108,25 +132,32 @@ export const useMcpImport = (
           effectiveCourses = catalog;
         }
 
-        // Katalogla eşleştir (birebir, sonra base kod: "BUS3002.1" ≈ "BUS3002")
-        const matchedIds = new Set<string>();
+        // Her draftın kodlarını ayrı ayrı eşleştir — her draft uygulamada
+        // kendi adıyla ayrı bir senaryo (taslak) olur
+        const draftGroups = (allDrafts && Array.isArray(draft.drafts) && draft.drafts.length > 0
+          ? draft.drafts
+            .filter(d => d && typeof d.name === 'string')
+            .map(d => ({ name: d.name, codes: Array.isArray(d.course_codes) ? d.course_codes : [] }))
+          : [{ name: draftName ?? 'Taslak', codes }]
+        ).map(d => ({ name: d.name, ...matchCodes(d.codes, effectiveCourses) }));
+
+        // Tüm draftların birleşimi (marks eşleştirmesi bu havuz üzerinden)
+        const allMatchedIds = new Set<string>();
         const draftMatchedIds = new Set<string>();
         const notFoundCodes: string[] = [];
+        for (const g of draftGroups) {
+          g.matchedIds.forEach(id => { allMatchedIds.add(id); draftMatchedIds.add(id); });
+          notFoundCodes.push(...g.notFoundCodes);
+        }
+
         // Kod → { eligible, tag } işaretleri; katalog eşleşmesiyle birleştirilir
         const marksByCourseId = new Map<string, { eligible?: boolean; tag?: string }>();
         const marks = draft.marks ?? {};
-
-        for (const code of codes) {
-          const wanted = code.trim().toLowerCase();
-          const match = effectiveCourses.find(c => c.courseCode.toLowerCase() === wanted) ||
-            effectiveCourses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === wanted);
-          if (match) {
-            matchedIds.add(match.id);
-            draftMatchedIds.add(match.id);
-            const mark = marks[match.courseCode];
-            if (mark) marksByCourseId.set(match.id, mark);
-          } else {
-            notFoundCodes.push(code);
+        for (const id of allMatchedIds) {
+          const course = effectiveCourses.find(c => c.id === id);
+          if (course) {
+            const mark = marks[course.courseCode];
+            if (mark) marksByCourseId.set(id, mark);
           }
         }
 
@@ -136,18 +167,47 @@ export const useMcpImport = (
           if (!mark.eligible && !mark.tag) continue;
           const match = effectiveCourses.find(c => c.courseCode.toLowerCase() === code.toLowerCase()) ||
             effectiveCourses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === code.toLowerCase());
-          if (match && !matchedIds.has(match.id)) {
-            matchedIds.add(match.id);
+          if (match && !allMatchedIds.has(match.id)) {
+            allMatchedIds.add(match.id);
             marksByCourseId.set(match.id, mark);
           }
         }
 
-        if (matchedIds.size > 0) {
+        // Senaryolar: her draft için { name, courseIds }. Import tarih
+        // sistemini atlar; yalnızca İLK senaryo aktif olur ve isSelected
+        // yalnızca onun derslerine verilir (app'te seçim aktif senaryoyla
+        // senkronize — diğer senaryolar kendi courseIds'ini taşır).
+        if (setScenarios && setActiveScenarioId) {
+          const createdScenarios = draftGroups
+            .filter(g => g.matchedIds.size > 0)
+            .map((g, i) => ({
+              id: `scenario-mcp-${Date.now()}-${i}`,
+              name: g.name,
+              courseIds: Array.from(g.matchedIds),
+              createdAt: Date.now(),
+            }));
+          if (createdScenarios.length > 0) {
+            const activeIds = new Set(createdScenarios[0].courseIds);
+            setScenarios(prev => [...prev, ...createdScenarios]);
+            setActiveScenarioId(createdScenarios[0].id);
+            if (allMatchedIds.size > 0) {
+              setCourses(prev => prev.map(c => {
+                if (!allMatchedIds.has(c.id)) return c;
+                const mark = marksByCourseId.get(c.id);
+                return {
+                  ...c,
+                  isSelected: activeIds.has(c.id),
+                  isEligible: true,
+                  ...(mark?.tag ? { tag: mark.tag } : {}),
+                };
+              }));
+            }
+          }
+        } else if (allMatchedIds.size > 0) {
+          // Senaryo API'si verilmediyse eski davranış: hepsi seçili
           setCourses(prev => prev.map(c => {
-            if (!matchedIds.has(c.id)) return c;
+            if (!allMatchedIds.has(c.id)) return c;
             const mark = marksByCourseId.get(c.id);
-            // Draft'ta olan ders gerçekten SEÇİLİ olur; yalnızca işaretlenen
-            // (marks'ta olup draft'ta olmayan) ders seçilmez, sadece havuza girer
             const isDraftCourse = draftMatchedIds.has(c.id);
             return {
               ...c,
@@ -159,13 +219,13 @@ export const useMcpImport = (
         }
 
         // Draft (programa eklenen) ve yalnızca işaretlenen (eligible/tag,
-        // draft'ta olmayan) ayrımı — bildirimde net ayrım için
+        // draft'ta olmayan) ayrımı
         const draftCount = draftMatchedIds.size;
-        const markedOnlyCount = matchedIds.size - draftCount;
+        const markedOnlyCount = allMatchedIds.size - draftCount;
 
         setState({
           status: 'success',
-          importedCount: matchedIds.size,
+          importedCount: allMatchedIds.size,
           draftCount,
           markedOnlyCount,
           notFoundCodes,

@@ -56,7 +56,9 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
       const draftNames = (state.drafts ?? []).filter(d => /^[a-zA-Z0-9çğıöşüÇĞİÖŞÜ _-]{1,64}$/.test(d));
       const merged: string[] = [];
       const seen = new Set<string>();
-      const perDraft: { name: string; count: number }[] = [];
+      // Her draftın kodları ayrı döndürülür — app tarafında her draft
+      // ayrı bir taslak (senaryo) olarak açılır
+      const perDraft: { name: string; course_codes: string[] }[] = [];
       await Promise.all(draftNames.map(async name => {
         const raw = await env.SCHEDULE_KV.get(`${sessionId}:draft:${name}`);
         if (!raw) return;
@@ -72,7 +74,7 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
           const fresh = safe.filter(c => !seen.has(c));
           fresh.forEach(c => seen.add(c));
           merged.push(...fresh);
-          perDraft.push({ name: draftNames[i], count: fresh.length });
+          perDraft.push({ name: draftNames[i], course_codes: safe });
         });
       });
       if (merged.length === 0 && state.marks && Object.keys(state.marks).length === 0) {
