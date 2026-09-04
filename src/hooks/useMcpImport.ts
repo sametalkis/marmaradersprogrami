@@ -21,8 +21,12 @@ interface DraftResponse {
 export interface McpImportState {
   /** idle = işlem yok */
   status: 'idle' | 'loading' | 'success' | 'error';
-  /** Başarıda katalogda eşleşen ders sayısı */
+  /** Başarıda katalogda eşleşen ders sayısı (draft + işaretleme toplamı) */
   importedCount: number;
+  /** Bunlardan kaçı draft'a eklenmişti (isSelected=seçili) */
+  draftCount: number;
+  /** Bunlardan kaçı yalnızca işaretlenmişti (eligible/tag — draft'ta değil) */
+  markedOnlyCount: number;
   /** Linkteki draft'ta olup katalogda bulunamayan kodlar */
   notFoundCodes: string[];
   /** Hata mesajı (404 = süresi doldu) */
@@ -39,6 +43,8 @@ export const useMcpImport = (
   const [state, setState] = useState<McpImportState>({
     status: 'idle',
     importedCount: 0,
+    draftCount: 0,
+    markedOnlyCount: 0,
     notFoundCodes: [],
     errorMessage: null,
     draftName: null,
@@ -60,7 +66,7 @@ export const useMcpImport = (
     window.history.replaceState(null, '', window.location.pathname + window.location.hash);
 
     if (!UUID_RE.test(sessionId)) {
-      setState({ status: 'error', importedCount: 0, notFoundCodes: [], errorMessage: 'Geçersiz içe aktarma linki.', draftName });
+      setState({ status: 'error', importedCount: 0, draftCount: 0, markedOnlyCount: 0, notFoundCodes: [], errorMessage: 'Geçersiz içe aktarma linki.', draftName });
       return;
     }
 
@@ -73,7 +79,7 @@ export const useMcpImport = (
           const errorMessage = res.status === 404
             ? 'Bu içe aktarma linkinin süresi dolmuş (24 saat) veya taslak bulunamadı.'
             : 'İçe aktarma sırasında sunucu hatası oluştu.';
-          setState({ status: 'error', importedCount: 0, notFoundCodes: [], errorMessage, draftName });
+          setState({ status: 'error', importedCount: 0, draftCount: 0, markedOnlyCount: 0, notFoundCodes: [], errorMessage, draftName });
           return;
         }
 
@@ -84,6 +90,7 @@ export const useMcpImport = (
 
         // Katalogla eşleştir (birebir, sonra base kod: "BUS3002.1" ≈ "BUS3002")
         const matchedIds = new Set<string>();
+        const draftMatchedIds = new Set<string>();
         const notFoundCodes: string[] = [];
         // Kod → { eligible, tag } işaretleri; katalog eşleşmesiyle birleştirilir
         const marksByCourseId = new Map<string, { eligible?: boolean; tag?: string }>();
@@ -95,6 +102,7 @@ export const useMcpImport = (
             courses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === wanted);
           if (match) {
             matchedIds.add(match.id);
+            draftMatchedIds.add(match.id);
             const mark = marks[match.courseCode];
             if (mark) marksByCourseId.set(match.id, mark);
           } else {
@@ -127,15 +135,22 @@ export const useMcpImport = (
           }));
         }
 
+        // Draft (programa eklenen) ve yalnızca işaretlenen (eligible/tag,
+        // draft'ta olmayan) ayrımı — bildirimde net ayrım için
+        const draftCount = draftMatchedIds.size;
+        const markedOnlyCount = matchedIds.size - draftCount;
+
         setState({
           status: 'success',
           importedCount: matchedIds.size,
+          draftCount,
+          markedOnlyCount,
           notFoundCodes,
           errorMessage: null,
           draftName,
         });
       } catch {
-        setState({ status: 'error', importedCount: 0, notFoundCodes: [], errorMessage: 'İçe aktarma başarısız: ağ hatası.', draftName });
+        setState({ status: 'error', importedCount: 0, draftCount: 0, markedOnlyCount: 0, notFoundCodes: [], errorMessage: 'İçe aktarma başarısız: ağ hatası.', draftName });
       }
     };
 

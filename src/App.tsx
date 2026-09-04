@@ -810,8 +810,11 @@ function App() {
         {mcpImport.status === 'success' && (
           <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold px-4 py-2 border-b border-emerald-100 dark:border-emerald-900 flex items-center justify-between gap-2" role="status">
             <span>
-              "{mcpImport.draftName}" taslağından {mcpImport.importedCount} ders işaretlendi
-              {mcpImport.notFoundCodes.length > 0 && ` (${mcpImport.notFoundCodes.length} ders listede yok: ${mcpImport.notFoundCodes.join(', ')})`}
+              {mcpImport.draftCount > 0 && `"${mcpImport.draftName}" taslağından ${mcpImport.draftCount} ders seçildi`}
+              {mcpImport.draftCount > 0 && mcpImport.markedOnlyCount > 0 && ' · '}
+              {mcpImport.markedOnlyCount > 0 && `${mcpImport.markedOnlyCount} ders uygun havuza işaretlendi (seçilmedi)`}
+              {mcpImport.importedCount === 0 && 'İçe aktarmada eşleşen ders yok'}
+              {mcpImport.notFoundCodes.length > 0 && ` (${mcpImport.notFoundCodes.length} kod katalogda yok: ${mcpImport.notFoundCodes.join(', ')})`}
             </span>
           </div>
         )}
