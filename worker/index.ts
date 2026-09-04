@@ -9,6 +9,7 @@
 
 import { handleMcp } from './mcp';
 import { handleApiSession } from './api';
+import { handleApiUpload } from './apiUpload';
 
 export interface Env {
   SCHEDULE_KV: KVNamespace;
@@ -25,6 +26,10 @@ export default {
 
     if (url.pathname === '/api/session') {
       return handleApiSession(request, env);
+    }
+
+    if (url.pathname === '/api/upload') {
+      return handleApiUpload(request, env);
     }
 
     // Diğer tüm istekler statik asset'lere (assets bindingwrangler.jsonc'de tanımlı)

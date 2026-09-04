@@ -29,7 +29,7 @@ import {
   defaultPreferences,
 } from '../src/utils/scheduleGenerator';
 
-const TTL_SECONDS = 86400; // 24 saat
+export const TTL_SECONDS = 86400; // 24 saat
 const MAX_FILTER_RESULTS = 30;
 const MAX_SUGGESTIONS = 5;
 const BASE_URL = 'https://marmaradersprogrami.sametalkis.me';
@@ -261,6 +261,9 @@ function createMcpServer(env: Env): McpServer {
         'Marmara Üniversitesi ders programı yardımcısı. ' +
         'Akış: upload_courses → (extract_courses / filter_courses) → add_to_eligible + tag_courses → add_to_draft → (check_conflicts) → (generate_schedule) → get_import_link. ' +
         'Tüm tool çağrıları upload_courses\'un döndürdüğü session_id kullanır. ' +
+        'ÖNEMLİ — Excel dosyası yükleme: Dosya zaten bir sunucuda/makinede erişilebilir durumdaysa (kullanıcı dosya yolu verdiyse), asla base64\'e çevirme! ' +
+        'Bunun yerine shell\'den: curl -sf -X POST ' + BASE_URL + '/api/upload -F "file=@DOSYA.xlsx" — dönen session_id doğrudan kullanılabilir. ' +
+        'fileBase64 yalnızca dosyaya erişimin yoksa ve içeriği zaten metin olarak görüyorsan kullanılmalıdır (büyük dosyalarda pahalıdır). ' +
         'Etiketler (mandatory/elective/important/optional) generate_schedule önceliklendirmesinde kullanılır. ' +
         'get_import_link\'in döndürdüğü link 24 saat sonra geçersiz olur — kullanıcıya mutlaka belirtin.',
     }
@@ -269,9 +272,9 @@ function createMcpServer(env: Env): McpServer {
   // ---- upload_courses ------------------------------------------------------
   server.registerTool('upload_courses', {
     title: 'Ders Kataloğu Yükle',
-    description: 'Excel dosyasını (base64) veya zaten parse edilmiş ders listesini yükler. 24 saat geçerli bir session_id döndürür; sonraki tüm çağrılar bu id\'yi kullanır.',
+    description: 'Ders kataloğunu yükler ve 24 saat geçerli session_id döndürür. Excel dosyası erişilebilir dosya yoluysa bunun yerine curl ile POST /api/upload kullan (bkz. server instructions) — base64\'e çevirme. fileBase64 yalnızca dosya içeriği zaten metin olarak elindeyse kullan. courses parametresi ile parse edilmiş ders listesi de verilebilir.',
     inputSchema: {
-      fileBase64: z.string().optional().describe('Excel (.xlsx) dosyasının base64 içeriği'),
+      fileBase64: z.string().optional().describe('Excel (.xlsx) base64 — SON ÇARE; dosya yolu erişilebilirse POST /api/upload kullan'),
       courses: z.array(z.object({
         courseCode: z.string().describe('Ders kodu, örn: BUS3002.1'),
         courseName: z.string(),

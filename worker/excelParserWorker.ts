@@ -15,8 +15,14 @@ import { parseAllSchedules } from '../src/utils/excelParser';
  * src/utils/excelParser.ts'deki parseExcelFile ile aynı sütun adlarını okur
  * ('Ders Kodu', 'Ders Adı', 'Öğretim Elemanı', 'Gün Saat Derslik', 'Kredi').
  */
-export const parseExcelFileFromBase64 = async (fileBase64: string): Promise<Course[]> => {
-  const bytes = Uint8Array.from(atob(fileBase64), ch => ch.charCodeAt(0));
+export const parseExcelFileFromBase64 = async (fileBase64: string): Promise<Course[]> =>
+  parseExcelFileFromBytes(Uint8Array.from(atob(fileBase64), ch => ch.charCodeAt(0)));
+
+/**
+ * Ham baytlardan Course[]'a parse eder (REST /api/upload akışı — baytlar
+ * modelden geçmez, curl/HTTP ile doğrudan gelir).
+ */
+export const parseExcelFileFromBytes = async (bytes: Uint8Array): Promise<Course[]> => {
   const workbook = XLSX.read(bytes, { type: 'array' });
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
