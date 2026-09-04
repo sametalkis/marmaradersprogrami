@@ -118,48 +118,51 @@ Uygulamayı tarayıcınız üzerinden doğrudan kullanmak için:
 
 ```
 .
-├── docs/
-│   └── screenshots/                  # README ekran görüntüleri
-├── public/
-│   └── favicon.png                   # Tarayıcı sekme ikonu
-├── src/
-│   ├── assets/                       # Statik varlıklar (react.svg)
-│   ├── components/                   # Yeniden kullanılabilir UI bileşenleri
-│   │   ├── ExcelUploader.tsx         # Sürükle-bırak Excel yükleme ekranı
-│   │   ├── CourseList.tsx            # Ders listesi + sekmeli filtreleme
-│   │   ├── CourseCard.tsx            # Tek ders kartı (+/−, etiketler)
-│   │   ├── ScheduleViewer.tsx        # Haftalık takvim (dikey/yatay)
-│   │   ├── ConfirmModal.tsx          # Çakışma onay penceresi
-│   │   ├── AutoScheduleModal.tsx     # Otomatik program sihirbazı
-│   │   ├── BatchImportModal.tsx      # Metin yapıştırarak toplu ders ekleme
-│   │   ├── CommandPalette.tsx        # ⌘K hızlı arama paleti
-│   │   ├── TagManager.tsx            # Özel etiket yönetimi
-│   │   ├── AccordionPanel.tsx        # Katlanır panel
-│   │   └── MobileBottomSheet.tsx     # Mobil alt sayfa navigasyonu
-│   ├── hooks/
-│   │   └── useLocalStorage.ts        # localStorage senkron state kancası
-│   ├── types/
-│   │   └── Course.ts                 # Ders, çakışma, senaryo tip tanımları
-│   ├── utils/
-│   │   ├── excelParser.ts            # Excel → Course[] parse katmanı
-│   │   ├── scheduleManager.ts        # Çakışma tespiti ve ders ekleme kuralları
-│   │   ├── scheduleGenerator.ts      # Otomatik çakışmasız program üretici
-│   │   ├── scheduleRenderUtils.ts    # Ders renk paleti ve takvim yardımcıları
-│   │   ├── courseCodeExtractor.ts    # Serbest metinden ders kodu çıkarma
-│   │   └── exportUtils.ts            # PDF (canvas) / Excel / Metin export
-│   ├── App.tsx                       # Uygulama kabuğu, header araç çubuğu, durum yönetimi
-│   ├── main.tsx                      # React DOM giriş noktası
-│   ├── index.css / App.css           # Tailwind katmanları ve özel stiller
-│   └── vite-env.d.ts                 # Vite istemci tip tanımları
-├── index.html                        # PWA meta etiketleri ve tema-color
-├── tailwind.config.js                # Tailwind yapılandırması
-├── postcss.config.js                 # PostCSS (Tailwind) yapılandırması
-├── eslint.config.js                  # ESLint yapılandırması
-├── tsconfig*.json                    # TypeScript proje yapılandırmaları
-├── vite.config.ts                    # Vite yapılandırması
-├── wrangler.jsonc                    # Cloudflare Workers yapılandırması
-├── LICENSE                           # GNU GPL v3
-└── package.json                      # Bağımlılıklar ve npm scriptleri
+|-- docs/
+|   `-- screenshots/                  # README ekran görüntüleri
+|-- public/
+|   `-- favicon.png                   # Tarayıcı sekme ikonu
+|-- src/
+|   |-- assets/                       # Statik varlıklar (react.svg)
+|   |-- components/                   # Yeniden kullanılabilir UI bileşenleri
+|   |   |-- ExcelUploader.tsx         # Sürükle-bırak Excel yükleme ekranı
+|   |   |-- CourseList.tsx            # Ders listesi + sekmeli filtreleme
+|   |   |-- CourseCard.tsx            # Tek ders kartı (+/-, etiketler)
+|   |   |-- ScheduleViewer.tsx        # Haftalık takvim (dikey/yatay)
+|   |   |-- ScheduleStats.tsx         # Haftalık istatistik paneli (AKTS, süre, boş gün)
+|   |   |-- ConfirmModal.tsx          # Çakışma onay penceresi
+|   |   |-- AutoScheduleModal.tsx     # Otomatik program sihirbazı
+|   |   |-- IcsExportModal.tsx        # .ics takvim export ayarları
+|   |   |-- BatchImportModal.tsx      # Metin yapıştırarak toplu ders ekleme
+|   |   |-- CommandPalette.tsx        # Ctrl+K hizli arama paleti
+|   |   |-- TagManager.tsx            # Ozel etiket yonetimi
+|   |   |-- AccordionPanel.tsx        # Katlanir panel
+|   |   `-- MobileBottomSheet.tsx     # Mobil alt sayfa navigasyonu
+|   |-- hooks/
+|   |   `-- useLocalStorage.ts        # localStorage senkron state kancasi
+|   |-- types/
+|   |   `-- Course.ts                 # Ders, cakisma, senaryo tip tanimlari
+|   |-- utils/
+|   |   |-- excelParser.ts            # Excel -> Course[] parse katmani
+|   |   |-- scheduleManager.ts        # Cakisma tespiti ve ders ekleme kurallari
+|   |   |-- scheduleGenerator.ts      # Otomatik cakismasiz program uretici
+|   |   |-- scheduleRenderUtils.ts    # Ders renk paleti ve takvim yardimcilari
+|   |   |-- courseCodeExtractor.ts    # Serbest metinden ders kodu cikarma
+|   |   |-- icsExport.ts              # ICS (iCalendar) icerik uretici
+|   |   `-- exportUtils.ts            # PDF (canvas) / Excel / Metin export
+|   |-- App.tsx                       # Uygulama kabugu, header arac cubugu, durum yonetimi
+|   |-- main.tsx                      # React DOM giris noktasi
+|   |-- index.css / App.css           # Tailwind katmanlari ve ozel stiller
+|   `-- vite-env.d.ts                 # Vite istemci tip tanimlari
+|-- index.html                        # PWA meta etiketleri ve tema-color
+|-- tailwind.config.js                # Tailwind yapilandirmasi
+|-- postcss.config.js                 # PostCSS (Tailwind) yapilandirmasi
+|-- eslint.config.js                  # ESLint yapilandirmasi
+|-- tsconfig*.json                    # TypeScript proje yapilandirmalari
+|-- vite.config.ts                    # Vite yapilandirmasi (PWA eklentisi dahil)
+|-- wrangler.jsonc                    # Cloudflare Workers yapilandirmasi
+|-- LICENSE                           # GNU GPL v3
+`-- package.json                      # Bagimliliklar ve npm scriptleri
 ```
 
 <br>
