@@ -82,6 +82,23 @@ async function localUploadCourses(args) {
       };
     }
   } catch (err) {
+    const code = err?.code;
+    if (code === 'ENOENT') {
+      // Muhtemel neden: yol Cowork VM'inin içinde (/mnt/user-data/...), proxy
+      // host'ta çalışır ve oraya erişemez. Modele doğru fallback'i söyle.
+      return {
+        content: [{
+          type: 'text',
+          text:
+            'Dosya bu makinede bulunamadı — büyük ihtimalle Cowork VM\'inin içinde ("/mnt/user-data/...") ve proxy host\'ta çalışıyor. ' +
+            'İki seçenek:\n' +
+            '1) Dosya VM\'indeyse: shell\'de şunu çalıştır ve çıktıyı fileBase64 parametresine ver: base64 -w0 "' + (args?.filePath ?? '') + '"\n' +
+            '2) Alternatif: kullanıcı dosyayı ~/Claude klasörüne kopyalarsa oradan okunabilir.\n' +
+            'Küçük dosyalarda seçenek 1 uygundur.',
+        }],
+        isError: true,
+      };
+    }
     return {
       content: [{ type: 'text', text: `Dosya okunamadı: ${err?.message ?? String(err)}` }],
       isError: true,
