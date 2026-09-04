@@ -1,10 +1,14 @@
 /**
  * MCP içe aktarma akışı
  *
- * MCP agent'ın ürettiği link (?import_session=<uuid>&draft=<ad>) ile açılan
- * sayfada: /api/session'dan taslak ders kodlarını çeker, yüklü katalogla
- * eşleştirir ve eşleşen dersleri seçili işaretler. URL parametreleri
- * history.replaceState ile temizlenir (refresh'te tekrar tetiklenmesin).
+ * MCP agent'ın ürettiği link (?import_session=<uuid>&draft=<ad> veya
+ * &all_drafts=1) ile açılan sayfada: /api/session'dan taslak ders kodlarını
+ * ve KATALOGU çeker. Katalog boşsa (link ile ilk kez gelen kullanıcı —
+ * localStorage'da ders yok) katalog cevaptan yüklenir; böylece import
+ * linki sıfır veriyle açılan sitede de doğrudan çalışır. Sonra kodlar
+ * katalogla eşleştirilir ve eşleşenler seçili işaretlenir. URL
+ * parametreleri history.replaceState ile temizlenir (refresh'te tekrar
+ * tetiklenmesin).
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -16,6 +20,8 @@ interface DraftResponse {
   updated_at?: string;
   /** Koda göre eligible/tag işaretleri (MCP session state'inden) */
   marks?: Record<string, { eligible?: boolean; tag?: string }>;
+  /** Tam katalog — link ile ilk kez gelen kullanıcının localStorage'ı boş olur */
+  courses?: Course[];
 }
 
 export interface McpImportState {
@@ -92,6 +98,16 @@ export const useMcpImport = (
           ? draft.course_codes.filter((c): c is string => typeof c === 'string')
           : [];
 
+        // Link ile ilk kez gelen kullanıcının localStorage'ı boştur; katalogu
+        // cevaptan yükle. setCourses tarih (history) sistemini atlar — import
+        // ilk yükleme sayılır, "geri al" kataloğu geri almamalı.
+        let effectiveCourses = courses;
+        if (courses.length === 0 && Array.isArray(draft.courses) && draft.courses.length > 0) {
+          const catalog = draft.courses.map(c => ({ ...c, isSelected: false, isEligible: false }));
+          setCourses(() => catalog);
+          effectiveCourses = catalog;
+        }
+
         // Katalogla eşleştir (birebir, sonra base kod: "BUS3002.1" ≈ "BUS3002")
         const matchedIds = new Set<string>();
         const draftMatchedIds = new Set<string>();
@@ -102,8 +118,8 @@ export const useMcpImport = (
 
         for (const code of codes) {
           const wanted = code.trim().toLowerCase();
-          const match = courses.find(c => c.courseCode.toLowerCase() === wanted) ||
-            courses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === wanted);
+          const match = effectiveCourses.find(c => c.courseCode.toLowerCase() === wanted) ||
+            effectiveCourses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === wanted);
           if (match) {
             matchedIds.add(match.id);
             draftMatchedIds.add(match.id);
@@ -118,8 +134,8 @@ export const useMcpImport = (
         // uygulanır — add_to_eligible akışı draft gerektirmez
         for (const [code, mark] of Object.entries(marks)) {
           if (!mark.eligible && !mark.tag) continue;
-          const match = courses.find(c => c.courseCode.toLowerCase() === code.toLowerCase()) ||
-            courses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === code.toLowerCase());
+          const match = effectiveCourses.find(c => c.courseCode.toLowerCase() === code.toLowerCase()) ||
+            effectiveCourses.find(c => getBaseCourseCode(c.courseCode).toLowerCase() === code.toLowerCase());
           if (match && !matchedIds.has(match.id)) {
             matchedIds.add(match.id);
             marksByCourseId.set(match.id, mark);
@@ -130,9 +146,12 @@ export const useMcpImport = (
           setCourses(prev => prev.map(c => {
             if (!matchedIds.has(c.id)) return c;
             const mark = marksByCourseId.get(c.id);
+            // Draft'ta olan ders gerçekten SEÇİLİ olur; yalnızca işaretlenen
+            // (marks'ta olup draft'ta olmayan) ders seçilmez, sadece havuza girer
+            const isDraftCourse = draftMatchedIds.has(c.id);
             return {
               ...c,
-              isSelected: true,
+              isSelected: isDraftCourse,
               isEligible: true,
               ...(mark?.tag ? { tag: mark.tag } : {}),
             };

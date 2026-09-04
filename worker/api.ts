@@ -40,10 +40,13 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
   const key = safeDraft ? `${sessionId}:draft:${safeDraft}` : sessionId;
 
   try {
-    // Session state (eligible/tag işaretleri) her zaman yanına eklenir
-    const [data, stateRaw] = await Promise.all([
+    // Session state (eligible/tag işaretleri) her zaman yanına eklenir;
+    // katalog (ham Course[]) — import linkiyle İLK kez gelen kullanıcının
+    // localStorage'ı boştur, eşleştirme ve app içeriği için katalog şart
+    const [data, stateRaw, catalogRaw] = await Promise.all([
       env.SCHEDULE_KV.get(key),
       env.SCHEDULE_KV.get(`${sessionId}:state`),
+      env.SCHEDULE_KV.get(sessionId),
     ]);
 
     // Tek link = tüm draftlar: session state'teki draft dizinini oku,
@@ -83,6 +86,7 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
         course_codes: merged,
         drafts: perDraft,
         marks,
+        courses: catalogRaw ? JSON.parse(catalogRaw) : [],
       }), {
         headers: {
           'content-type': 'application/json',
@@ -108,6 +112,7 @@ export const handleApiSession = async (request: Request, env: Env): Promise<Resp
         course_codes: draft.course_codes ?? [],
         updated_at: draft.updated_at,
         marks: state.marks ?? {},
+        courses: catalogRaw ? JSON.parse(catalogRaw) : [],
       }), {
         headers: {
           'content-type': 'application/json',

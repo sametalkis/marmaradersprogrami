@@ -810,7 +810,9 @@ function App() {
         {mcpImport.status === 'success' && (
           <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold px-4 py-2 border-b border-emerald-100 dark:border-emerald-900 flex items-center justify-between gap-2" role="status">
             <span>
-              {mcpImport.draftCount > 0 && `"${mcpImport.draftName}" taslağından ${mcpImport.draftCount} ders seçildi`}
+              {mcpImport.draftCount > 0 && (mcpImport.draftName
+                ? `"${mcpImport.draftName}" taslağından ${mcpImport.draftCount} ders seçildi`
+                : `${mcpImport.draftCount} ders seçildi`)}
               {mcpImport.draftCount > 0 && mcpImport.markedOnlyCount > 0 && ' · '}
               {mcpImport.markedOnlyCount > 0 && `${mcpImport.markedOnlyCount} ders uygun havuza işaretlendi (seçilmedi)`}
               {mcpImport.importedCount === 0 && 'İçe aktarmada eşleşen ders yok'}
