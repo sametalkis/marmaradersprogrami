@@ -2,9 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "marmaradersprogrami",
   "compatibility_date": "2026-08-12",
+  "main": "worker/index.ts",
   "observability": {
     "enabled": true
   },
+  "kv_namespaces": [
+    // MCP session/draft verisi (24 saat TTL'li). ID: wrangler kv namespace create SCHEDULE_KV
+    { "binding": "SCHEDULE_KV", "id": "46992baebb0d424a97dd22c6e8204b04" }
+  ],
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"

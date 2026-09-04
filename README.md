@@ -111,6 +111,65 @@ Uygulamayı tarayıcınız üzerinden doğrudan kullanmak için:
 - **dnd-kit:** Sürükle-bırak sıralama
 - **Lucide React:** İkon seti
 - **Web Storage API:** Tüm uygulama verisi için localStorage kalıcılığı
+- **MCP (@modelcontextprotocol/sdk):** AI ajanları için stateless tool sunucusu (Cloudflare Workers + KV)
+
+<br>
+
+## MCP Server
+
+Uygulama, AI ajanlarının (Claude Desktop, Cursor vb.) ders kataloğu üzerinde çalışabilmesi için aynı Worker üzerinde **`/mcp`** endpoint'inde stateless bir MCP (Model Context Protocol) sunucusu sunar. **Durable Objects kullanılmaz** (Free plan uyumu); session durumu 24 saat TTL'li Cloudflare KV'de tutulur.
+
+### Araçlar (Tools)
+
+| Araç | Açıklama |
+|---|---|
+| `upload_courses` | Excel (base64) veya hazır ders listesini yükler → 24 saat geçerli `session_id` |
+| `filter_courses` | Katalogda kod/ad/öğretim üyesi/departman/gün filtresi (max 30 sonuç) |
+| `add_to_draft` | Dersleri taslağa ekler; çakışma varsa `confirm_add: true` ister |
+| `check_conflicts` | Taslaktaki zaman çakışmalarını raporlar |
+| `generate_schedule` | Çakışmasız program kombinasyonları üretir (en iyi 5) |
+| `get_import_link` | Taslağı uygulamaya aktaran `?import_session=...&draft=...` linkini üretir (24 saat geçerli) |
+
+### Kullanıcı Akışı
+
+```
+upload_courses → filter_courses → add_to_draft → check_conflicts → get_import_link
+                                                                          |
+        +-----------------------------------------------------------------+
+        | Kullanıcı linke tıklar: /?import_session=<uuid>&draft=<ad>
+        v
+Frontend /api/session'u okur -> katalogla eşleştirir -> dersleri seçili işaretler
+```
+
+### Claude Desktop Bağlama
+
+`claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "marmara-schedule": {
+      "type": "http",
+      "url": "https://marmaradersprogrami.sametalkis.me/mcp"
+    }
+  }
+}
+```
+
+### Yerel Geliştirme
+
+```bash
+npm run build            # dist/ gerekli (Worker statik asset olarak servis eder)
+CI=true npx wrangler dev # http://localhost:8787/mcp
+```
+
+Test:
+
+```bash
+curl -X POST http://localhost:8787/mcp \
+  -H 'content-type: application/json' -H 'accept: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
 
 <br>
 
@@ -154,13 +213,18 @@ Uygulamayı tarayıcınız üzerinden doğrudan kullanmak için:
 |   |-- main.tsx                      # React DOM giris noktasi
 |   |-- index.css / App.css           # Tailwind katmanlari ve ozel stiller
 |   `-- vite-env.d.ts                 # Vite istemci tip tanimlari
+|-- worker/                           # Cloudflare Worker (MCP + API)
+|   |-- index.ts                      # Route dagiticisi: /mcp, /api/session, statik asset
+|   |-- mcp.ts                        # Stateless MCP server (6 tool, DO'suz)
+|   |-- api.ts                        # Salt-okunur /api/session endpoint'i
+|   `-- excelParserWorker.ts          # base64 Excel parse (src mantigini paylasir)
 |-- index.html                        # PWA meta etiketleri ve tema-color
 |-- tailwind.config.js                # Tailwind yapilandirmasi
 |-- postcss.config.js                 # PostCSS (Tailwind) yapilandirmasi
 |-- eslint.config.js                  # ESLint yapilandirmasi
-|-- tsconfig*.json                    # TypeScript proje yapilandirmalari
+|-- tsconfig*.json                    # TypeScript proje yapilandirmalari (worker dahil)
 |-- vite.config.ts                    # Vite yapilandirmasi (PWA eklentisi dahil)
-|-- wrangler.jsonc                    # Cloudflare Workers yapilandirmasi
+|-- wrangler.jsonc                    # Workers yapilandirmasi (main, KV, assets)
 |-- LICENSE                           # GNU GPL v3
 `-- package.json                      # Bagimliliklar ve npm scriptleri
 ```

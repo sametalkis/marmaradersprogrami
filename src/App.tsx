@@ -18,6 +18,7 @@ import { IcsExportModal } from './components/IcsExportModal';
 import { exportToIcs, buildIcsContent } from './utils/icsExport';
 import { canAddCourse, findScheduleConflicts } from './utils/scheduleManager';
 import { exportToPDF, exportToExcel, generateScheduleSummary, downloadTextFile } from './utils/exportUtils';
+import { useMcpImport } from './hooks/useMcpImport';
 import './App.css';
 
 function App() {
@@ -36,6 +37,9 @@ function App() {
     { id: 'default', name: 'Taslak 1', courseIds: [], createdAt: Date.now() }
   ]);
   const [activeScenarioId, setActiveScenarioId] = useLocalStorage<string>('marmara-active-scenario', 'default');
+
+  // MCP içe aktarma akışı (?import_session=&draft= linki) — taslak senkronizasyonu
+  const mcpImport = useMcpImport(courses, setCourses);
 
   // Undo / Redo Geçmişi
   const [history, setHistory] = useState<Course[][]>([]);
@@ -523,6 +527,17 @@ function App() {
         <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] bg-violet-600/5 dark:bg-violet-600/15 rounded-full blur-[110px] pointer-events-none" />
 
         <div className="max-w-xl w-full relative z-10">
+          {mcpImport.status !== 'idle' && mcpImport.status !== 'loading' && (
+            <div className={`mb-6 p-3 rounded-xl text-xs font-semibold border ${
+              mcpImport.status === 'success'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900'
+                : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900'
+            }`} role="status">
+              {mcpImport.status === 'success'
+                ? `"${mcpImport.draftName}" taslağındaki ${mcpImport.importedCount} ders bulundu — önce Excel listenizi yükleyin, dersler otomatik seçilecek şekilde işaretlenebilir.`
+                : mcpImport.errorMessage}
+            </div>
+          )}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-4">
               <BookOpen className="w-3.5 h-3.5" />
@@ -786,6 +801,25 @@ function App() {
 
       {/* Main Content - Split Panel */}
       <main className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* MCP içe aktarma bildirim bandı */}
+        {mcpImport.status === 'loading' && (
+          <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold px-4 py-2 border-b border-indigo-100 dark:border-indigo-900" role="status">
+            MCP taslağı içe aktarılıyor…
+          </div>
+        )}
+        {mcpImport.status === 'success' && (
+          <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold px-4 py-2 border-b border-emerald-100 dark:border-emerald-900 flex items-center justify-between gap-2" role="status">
+            <span>
+              "{mcpImport.draftName}" taslağından {mcpImport.importedCount} ders işaretlendi
+              {mcpImport.notFoundCodes.length > 0 && ` (${mcpImport.notFoundCodes.length} ders listede yok: ${mcpImport.notFoundCodes.join(', ')})`}
+            </span>
+          </div>
+        )}
+        {mcpImport.status === 'error' && (
+          <div className="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold px-4 py-2 border-b border-red-100 dark:border-red-900" role="status">
+            {mcpImport.errorMessage}
+          </div>
+        )}
         {/* Sol Panel - Workspace Ders Listesi (Desktop) */}
         {!isSidebarCollapsed && (
           <aside className="hidden lg:flex w-[410px] xl:w-[460px] h-full min-h-0 bg-white dark:bg-black border-r border-slate-200 dark:border-zinc-900 flex-col overflow-hidden transition-all duration-200">
