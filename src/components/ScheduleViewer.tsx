@@ -74,17 +74,27 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
   // Taslak çubuğu: mouse wheel'i yatay kaydırmaya çevir (scrollbar gizli olduğundan tek yol olsun).
   // Native listener (React onWheel passive olduğu için preventDefault çalışmaz).
   const scenarioBarRef = useRef<HTMLDivElement>(null);
+  const [canScrollScenarios, setCanScrollScenarios] = useState(false);
   useEffect(() => {
     const bar = scenarioBarRef.current;
     if (!bar) return;
+    const updateScrollable = () => setCanScrollScenarios(bar.scrollWidth > bar.clientWidth + 1);
+    updateScrollable();
+    bar.addEventListener('scroll', updateScrollable, { passive: true });
+    const ro = new ResizeObserver(updateScrollable);
+    ro.observe(bar);
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // yatay wheel/touchpad'e dokunma
       bar.scrollLeft += e.deltaY;
       e.preventDefault();
     };
     bar.addEventListener('wheel', onWheel, { passive: false });
-    return () => bar.removeEventListener('wheel', onWheel);
-  }, []);
+    return () => {
+      bar.removeEventListener('wheel', onWheel);
+      bar.removeEventListener('scroll', updateScrollable);
+      ro.disconnect();
+    };
+  });
 
   // Günlere göre ders sayıları (Mobilde gün haplarının üzerinde rozet olarak gösterilir)
   const courseCountByDay = useMemo(() => {
@@ -318,7 +328,15 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
 
       {/* Senaryo / Taslak Sekmeleri */}
       {scenarios.length > 0 && (
-        <div data-html2canvas-ignore="true" className="flex items-center gap-1.5 px-3 sm:px-6 py-2 bg-slate-100/80 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-900">
+        <div data-html2canvas-ignore="true" className="relative flex items-center gap-1.5 px-3 sm:px-6 py-2 bg-slate-100/80 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-900">
+          {/* Sağ kenarda kaydırma ipucu: taşan çip varsa gradient + ok göster */}
+          {canScrollScenarios && (
+            <div className="pointer-events-none absolute right-2 top-0 bottom-0 flex items-center justify-end w-10 bg-gradient-to-l from-slate-100/95 dark:from-zinc-950/95 to-transparent" aria-hidden="true">
+              <svg className="h-4 w-4 text-slate-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          )}
           {/* Çipler çoksa yatay kaydırma; "Taslaklar:" etiketi ve "Yeni Taslak" sabit kalır */}
           <div ref={scenarioBarRef} className="flex items-center gap-1.5 overflow-x-auto scrollbar-none min-w-0 scroll-smooth">
             <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mr-1 flex items-center gap-1 flex-shrink-0">
