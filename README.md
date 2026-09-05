@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="public/favicon.png" alt="Marmara Ders Programı Logo" height="128" width="128"/>
+    <img src="public/marmara_universitesi_amblem.svg" alt="Marmara Üniversitesi Amblemi" height="128" width="128"/>
     <h1>
         <b>Marmara Ders Programı</b>
     </h1>
@@ -91,6 +91,7 @@ Uygulamayı tarayıcınız üzerinden doğrudan kullanmak için:
 - **Geri Al / İleri Al** geçmişi (⌘Z / ⌘⇧Z)
 - **⌘K komut paleti** ile hızlı ders arama
 - **Senaryolar**: Birden fazla program taslağı yan yana
+- **Vurgu rengi**: 9 hazır palet + gökkuşağı seçeneğiyle tarayıcı renk seçicisinden istediğiniz özel renk
 - OLED karanlık tema dahil aydınlık/karanlık mod
 
 ### 📄 Export
@@ -184,7 +185,8 @@ curl -X POST http://localhost:8787/mcp \
 |-- docs/
 |   `-- screenshots/                  # README ekran görüntüleri
 |-- public/
-|   `-- favicon.png                   # Tarayıcı sekme ikonu
+|   |-- favicon.png                   # Tarayıcı sekme ikonu (PNG, apple-touch-icon)
+|   `-- marmara_universitesi_amblem.svg  # Marmara amblemi (SVG favicon + header logosu)
 |-- src/
 |   |-- assets/                       # Statik varlıklar (react.svg)
 |   |-- components/                   # Yeniden kullanılabilir UI bileşenleri
