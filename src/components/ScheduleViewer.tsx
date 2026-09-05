@@ -303,12 +303,14 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
 
       {/* Senaryo / Taslak Sekmeleri */}
       {scenarios.length > 0 && (
-        <div data-html2canvas-ignore="true" className="flex items-center gap-1.5 px-3 sm:px-6 py-2 bg-slate-100/80 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-900 overflow-x-auto scrollbar-none">
-          <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mr-1 flex items-center gap-1 flex-shrink-0">
-            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-            Taslaklar:
-          </span>
-          {scenarios.map((sc) => {
+        <div data-html2canvas-ignore="true" className="flex items-center gap-1.5 px-3 sm:px-6 py-2 bg-slate-100/80 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-900">
+          {/* Çipler çoksa yatay kaydırma; "Taslaklar:" etiketi ve "Yeni Taslak" sabit kalır */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none min-w-0 scroll-smooth">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mr-1 flex items-center gap-1 flex-shrink-0">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+              Taslaklar:
+            </span>
+            {scenarios.map((sc) => {
             const isActive = activeScenarioId === sc.id;
             const isEditing = editingScenarioId === sc.id;
 
@@ -425,6 +427,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
               </div>
             );
           })}
+          </div>
           <button
             onClick={() => onAddScenario?.()}
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-dashed border-indigo-300 dark:border-indigo-700 transition-colors flex-shrink-0"

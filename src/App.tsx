@@ -622,9 +622,7 @@ function App() {
         <div className="px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="p-1.5 sm:p-2 bg-slate-900 dark:bg-zinc-900 text-white rounded-lg border border-transparent dark:border-zinc-800 flex-shrink-0">
-                <BookOpen className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
-              </div>
+              <img src="/marmara_universitesi_amblem.svg" alt="Marmara Üniversitesi" className="h-9 sm:h-10 w-9 sm:w-10 flex-shrink-0" />
               <div className="min-w-0">
                 <h1 className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
                   Marmara Ders Programı
