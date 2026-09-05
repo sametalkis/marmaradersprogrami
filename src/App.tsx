@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Calendar, CalendarDays, Download, FileText, FileCode2, Wand2, BookOpen, CheckCircle, List,
-  Tag, Sun, Moon, Search, Undo2, Redo2, PanelLeftClose, PanelLeftOpen, Trash2, ClipboardPaste
+  Tag, Sun, Moon, Search, Undo2, Redo2, PanelLeftClose, PanelLeftOpen, Trash2, ClipboardPaste, Settings, Check
 } from 'lucide-react';
 import type { Course, ExcelData, ScheduleConflict, CustomTag, ScheduleScenario } from './types/Course';
 import { CourseStatus, CourseTag } from './types/Course';
@@ -21,6 +21,58 @@ import { exportToPDF, exportToExcel, generateScheduleSummary, downloadTextFile }
 import { useMcpImport } from './hooks/useMcpImport';
 import './App.css';
 
+// Vurgu rengi seçenekleri (index.css'teki [data-accent] bloklarıyla eşleşir)
+// 'custom' sabit paletten bağımsızdır: kullanıcı renk seçer, tonlar JS'te türetilir.
+const ACCENT_OPTIONS = [
+  { id: 'indigo', label: 'Çivit', swatch: '#6366f1' },
+  { id: 'blue', label: 'Mavi', swatch: '#3b82f6' },
+  { id: 'sky', label: 'Gökyüzü', swatch: '#0ea5e9' },
+  { id: 'violet', label: 'Menekşe', swatch: '#8b5cf6' },
+  { id: 'fuchsia', label: 'Fuşya', swatch: '#d946ef' },
+  { id: 'rose', label: 'Gül', swatch: '#f43f5e' },
+  { id: 'emerald', label: 'Zümrüt', swatch: '#10b981' },
+  { id: 'teal', label: 'Deniz', swatch: '#14b8a6' },
+  { id: 'amber', label: 'Amber', swatch: '#f59e0b' },
+  { id: 'custom', label: 'Özel', swatch: 'conic-gradient(from 180deg, #f43f5e, #f59e0b, #84cc16, #14b8a6, #3b82f6, #8b5cf6, #f43f5e)' },
+] as const;
+
+export type AccentColor = typeof ACCENT_OPTIONS[number]['id'];
+
+const ACCENT_SHADES = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
+
+// Hex'i Tailwind benzeri 11 tonlu palete dönüştürür (beyaz/siyahla karıştırma).
+// Sonuçlar index.css'teki --accent-* değişkenleriyle aynı formattadır: "r g b"
+function hexToRgbTriplet(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function mixTriplet(a: [number, number, number], b: [number, number, number], t: number): string {
+  const r = Math.round(a[0] + (b[0] - a[0]) * t);
+  const g = Math.round(a[1] + (b[1] - a[1]) * t);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+  return `${r} ${g} ${bl}`;
+}
+
+// Özel rengi 11 tonlu accent paletine çevirir (500 = seçilen rengin kendisi)
+function buildAccentShades(hex: string): Record<string, string> {
+  const base = hexToRgbTriplet(hex);
+  const white: [number, number, number] = [255, 255, 255];
+  const black: [number, number, number] = [0, 0, 0];
+  const tints: Array<[string, number]> = [
+    ['50', 0.92], ['100', 0.85], ['200', 0.72], ['300', 0.55], ['400', 0.35],
+  ];
+  const shades: Array<[string, number]> = [
+    ['600', 0.15], ['700', 0.30], ['800', 0.45], ['900', 0.58], ['950', 0.72],
+  ];
+  const out: Record<string, string> = { '500': base.join(' ') };
+  tints.forEach(([k, t]) => { out[k] = mixTriplet(base, white, t); });
+  shades.forEach(([k, t]) => { out[k] = mixTriplet(base, black, t); });
+  return out;
+}
+
 function App() {
   const [courses, setCourses] = useLocalStorage<Course[]>('marmara-courses', []);
   const [customTags, setCustomTags] = useLocalStorage<CustomTag[]>('marmara-custom-tags', []);
@@ -31,6 +83,13 @@ function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('marmara-theme', 'light');
+
+  // Vurgu rengi + ayar popover'ı
+  const [accent, setAccent] = useLocalStorage<AccentColor>('marmara-accent', 'indigo');
+  const [customAccent, setCustomAccent] = useLocalStorage<string>('marmara-accent-custom', '#6366f1');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
   // Senaryo / Preset Deck Durumu
   const [scenarios, setScenarios] = useLocalStorage<ScheduleScenario[]>('marmara-scenarios', [
@@ -83,6 +142,45 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  // Vurgu rengini <html data-accent> üzerine yansıt
+  useEffect(() => {
+    document.documentElement.setAttribute('data-accent', accent);
+  }, [accent]);
+
+  // Özel vurgu rengi: tonları türetip CSS değişkenlerine yaz (accent === 'custom' iken etkili).
+  // Custom'dan çıkınca inline değişkenler temizlenir; yoksa diğer paletleri ezerler.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (accent !== 'custom') {
+      ACCENT_SHADES.forEach(s => root.style.removeProperty(`--accent-${s}`));
+      return;
+    }
+    const shades = buildAccentShades(customAccent);
+    Object.entries(shades).forEach(([shade, rgb]) => {
+      root.style.setProperty(`--accent-${shade}`, rgb);
+    });
+  }, [accent, customAccent]);
+
+  // Ayar popover'ı dış tıklamada kapan
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsSettingsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isSettingsOpen]);
+
   
   // Çakışma modal state'leri
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
@@ -523,7 +621,7 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 relative flex items-center justify-center p-4 overflow-hidden transition-colors duration-300">
         {/* Ambient background glows */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-indigo-600/10 dark:bg-indigo-600/20 rounded-full blur-[130px] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-accent-600/10 dark:bg-accent-600/20 rounded-full blur-[130px] pointer-events-none" />
         <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] bg-violet-600/5 dark:bg-violet-600/15 rounded-full blur-[110px] pointer-events-none" />
 
         <div className="max-w-xl w-full relative z-10">
@@ -533,7 +631,7 @@ function App() {
             </div>
           )}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/10 border border-accent-500/20 text-accent-600 dark:text-accent-400 text-xs font-semibold uppercase tracking-wider mb-4">
               <BookOpen className="w-3.5 h-3.5" />
               Marmara Üniversitesi
             </div>
@@ -641,7 +739,7 @@ function App() {
                 className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-900 hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 border border-slate-200 dark:border-zinc-800 transition-colors cursor-pointer shadow-2xs"
                 title="Hızlı Ders Ara (⌘K veya /)"
               >
-                <Search className="h-3.5 w-3.5 text-indigo-500" />
+                <Search className="h-3.5 w-3.5 text-accent-500" />
                 <span className="font-bold">Ders Ara</span>
                 <kbd className="hidden lg:inline-flex px-1.5 py-0.5 text-[10px] leading-none font-mono bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-slate-500 dark:text-zinc-400">
                   ⌘K
@@ -726,6 +824,76 @@ function App() {
                 </div>
               )}
 
+              {/* Ayarlar: Vurgu Rengi Seçimi */}
+              <div className="relative flex-shrink-0" ref={settingsRef}>
+                <button
+                  onClick={() => setIsSettingsOpen(prev => !prev)}
+                  className="flex items-center justify-center p-1.5 rounded-xl text-slate-600 dark:text-zinc-400 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-slate-100 dark:hover:bg-zinc-900 border border-slate-200 dark:border-zinc-800 transition-colors cursor-pointer active:scale-95"
+                  title="Ayarlar"
+                  aria-haspopup="menu"
+                  aria-expanded={isSettingsOpen}
+                >
+                  <Settings className={`h-4 w-4 transition-transform duration-300 ${isSettingsOpen ? 'rotate-90' : ''} ${accent !== 'indigo' ? 'text-accent-500' : ''}`} />
+                  {accent === 'custom' && (
+                    <span
+                      className="absolute top-1 right-1 w-2 h-2 rounded-full border border-white dark:border-zinc-950"
+                      style={{ backgroundColor: customAccent }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+
+                {isSettingsOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl p-3 z-50">
+                    <p className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2 px-1">
+                      Vurgu Rengi
+                    </p>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {ACCENT_OPTIONS.map(opt => (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            if (opt.id === 'custom') {
+                              setAccent('custom');
+                              // Tarayıcının native renk paletini aç
+                              requestAnimationFrame(() => colorInputRef.current?.click());
+                            } else {
+                              setAccent(opt.id);
+                            }
+                          }}
+                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-90 ${
+                            accent === opt.id
+                              ? 'ring-2 ring-offset-2 ring-slate-400 dark:ring-zinc-400 dark:ring-offset-zinc-900 scale-105'
+                              : 'hover:scale-110'
+                          }`}
+                          style={
+                            opt.id === 'custom'
+                              ? { background: opt.swatch }
+                              : { backgroundColor: opt.swatch }
+                          }
+                          title={opt.label}
+                          role="menuitemradio"
+                          aria-checked={accent === opt.id}
+                          aria-label={`Vurgu rengi: ${opt.label}`}
+                        >
+                          {accent === opt.id && <Check className="h-4 w-4 text-white drop-shadow" />}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Tarayıcı native renk paleti (Özel swatch'tan açılır) */}
+                    <input
+                      ref={colorInputRef}
+                      type="color"
+                      value={customAccent}
+                      onChange={(e) => setCustomAccent(e.target.value)}
+                      className="sr-only"
+                      aria-label="Özel vurgu rengi seç"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Icon-Only Sun/Moon OLED Theme Toggle Switch */}
               <div 
                 data-html2canvas-ignore="true" 
@@ -756,7 +924,7 @@ function App() {
                 <button
                   onClick={() => handleSetTheme('dark')}
                   className={`relative z-10 w-[26px] h-[26px] flex items-center justify-center rounded-full outline-none transition-colors duration-200 cursor-pointer ${
-                    theme === 'dark' ? 'text-indigo-400 font-bold' : 'text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300'
+                    theme === 'dark' ? 'text-accent-400 font-bold' : 'text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300'
                   }`}
                   title="OLED Karanlık Tema"
                   role="radio"
@@ -770,7 +938,7 @@ function App() {
               {/* Toplu Ders Ekle (Akıllı Yapıştır) */}
               <button
                 onClick={() => setIsBatchImportOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 border border-indigo-200/80 dark:border-indigo-800/60 transition-all cursor-pointer shadow-2xs flex-shrink-0 active:scale-95"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl text-accent-600 dark:text-accent-400 bg-accent-50/80 hover:bg-accent-100 dark:bg-accent-950/50 dark:hover:bg-accent-900/50 border border-accent-200/80 dark:border-accent-800/60 transition-all cursor-pointer shadow-2xs flex-shrink-0 active:scale-95"
                 title="Metin yapıştırarak ders kodlarını topluca uyguna ekle"
               >
                 <ClipboardPaste className="h-3.5 w-3.5" />
@@ -808,7 +976,7 @@ function App() {
                 onClick={() => setActiveTab('all')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'all'
-                    ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-800'
+                    ? 'bg-white dark:bg-zinc-900 text-accent-600 dark:text-accent-400 shadow-sm border border-slate-200 dark:border-zinc-800'
                     : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-900/50'
                 }`}
               >
@@ -823,7 +991,7 @@ function App() {
                 onClick={() => setActiveTab('eligible')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'eligible'
-                    ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-800'
+                    ? 'bg-white dark:bg-zinc-900 text-accent-600 dark:text-accent-400 shadow-sm border border-slate-200 dark:border-zinc-800'
                     : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-900/50'
                 }`}
               >
@@ -840,14 +1008,14 @@ function App() {
                 onClick={() => setActiveTab('selected')}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all relative cursor-pointer ${
                   activeTab === 'selected'
-                    ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-800'
+                    ? 'bg-white dark:bg-zinc-900 text-accent-600 dark:text-accent-400 shadow-sm border border-slate-200 dark:border-zinc-800'
                     : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-900/50'
                 }`}
               >
                 <CheckCircle className="h-3.5 w-3.5" />
                 <span>Seçilen</span>
                 <span className={`inline-flex items-center justify-center min-w-[18px] text-[10px] leading-none px-1.5 py-1 rounded-full font-mono ${
-                  selectedCount > 0 ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-100 dark:bg-zinc-800'
+                  selectedCount > 0 ? 'bg-accent-100 dark:bg-accent-950 text-accent-700 dark:text-accent-300 font-bold' : 'bg-slate-100 dark:bg-zinc-800'
                 }`}>
                   {selectedCount}
                 </span>
@@ -860,7 +1028,7 @@ function App() {
                 onClick={() => setActiveTab('tags')}
                 className={`flex items-center justify-center p-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'tags'
-                    ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-zinc-800'
+                    ? 'bg-white dark:bg-zinc-900 text-accent-600 dark:text-accent-400 shadow-sm border border-slate-200 dark:border-zinc-800'
                     : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-900/50'
                 }`}
                 title="Özel Etiket Yönetimi"
@@ -890,26 +1058,26 @@ function App() {
               {activeTab === 'eligible' && (
                 <div className="space-y-3">
                   {eligibleCount > 0 ? (
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50">
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-accent-50/70 dark:bg-accent-950/40 border border-accent-200/80 dark:border-accent-800/50">
                       <div>
-                        <p className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                        <p className="text-xs font-bold text-accent-950 dark:text-accent-200">
                           {eligibleCount} ders uygun havuzunda
                         </p>
-                        <p className="text-[11px] text-indigo-700 dark:text-indigo-300 mt-0.5">
+                        <p className="text-[11px] text-accent-700 dark:text-accent-300 mt-0.5">
                           Otomatik sihirbaz ile en iyi kombinasyonu bulun
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => setIsBatchImportOpen(true)}
-                          className="p-1.5 text-xs font-bold bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-lg border border-slate-200 dark:border-zinc-700 shadow-2xs transition-all cursor-pointer"
+                          className="p-1.5 text-xs font-bold bg-white dark:bg-zinc-800 text-accent-600 dark:text-accent-400 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-lg border border-slate-200 dark:border-zinc-700 shadow-2xs transition-all cursor-pointer"
                           title="Metinden Yeni Dersler Ekle"
                         >
                           <ClipboardPaste className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => setIsAutoScheduleModalOpen(true)}
-                          className="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-sm transition-all cursor-pointer"
+                          className="px-3 py-1.5 text-xs font-bold bg-accent-600 hover:bg-accent-500 text-white rounded-lg shadow-sm transition-all cursor-pointer"
                         >
                           Sihirbaz
                         </button>
@@ -925,7 +1093,7 @@ function App() {
                       <div className="flex items-center justify-center gap-2 mt-3">
                         <button
                           onClick={() => setActiveTab('all')}
-                          className="px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer"
+                          className="px-3 py-1.5 text-xs font-bold text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-950/60 rounded-lg hover:bg-accent-100 transition-colors cursor-pointer"
                         >
                           Tüm Dersler →
                         </button>
@@ -1013,7 +1181,7 @@ function App() {
                     {selectedCount} Ders Seçili
                   </span>
                   {selectedCount > 0 && (
-                    <span className="inline-flex items-center justify-center text-[10px] leading-none px-1.5 py-1 rounded-full font-mono bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-black border border-indigo-200/60 dark:border-indigo-800/50 flex-shrink-0">
+                    <span className="inline-flex items-center justify-center text-[10px] leading-none px-1.5 py-1 rounded-full font-mono bg-accent-50 dark:bg-accent-950/60 text-accent-600 dark:text-accent-400 font-black border border-accent-200/60 dark:border-accent-800/50 flex-shrink-0">
                       {courses.filter(c => c.isSelected).reduce((sum, c) => sum + (c.credits || 0), 0)} AKTS
                     </span>
                   )}
@@ -1100,26 +1268,26 @@ function App() {
           {mobileTab === 'eligible' && (
             <div className="flex-1 min-h-0 overflow-y-auto p-3 pb-24 bg-white dark:bg-black space-y-3">
               {eligibleCount > 0 ? (
-                <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-accent-50/70 dark:bg-accent-950/40 border border-accent-200/80 dark:border-accent-800/50">
                   <div>
-                    <p className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                    <p className="text-xs font-bold text-accent-950 dark:text-accent-200">
                       {eligibleCount} ders uygun havuzunda
                     </p>
-                    <p className="text-[11px] text-indigo-700 dark:text-indigo-300 mt-0.5">
+                    <p className="text-[11px] text-accent-700 dark:text-accent-300 mt-0.5">
                       Otomatik sihirbaz ile en iyi kombinasyonu bulun
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => setIsBatchImportOpen(true)}
-                      className="p-1.5 text-xs font-bold bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-lg border border-slate-200 dark:border-zinc-700 shadow-2xs transition-all cursor-pointer"
+                      className="p-1.5 text-xs font-bold bg-white dark:bg-zinc-800 text-accent-600 dark:text-accent-400 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-lg border border-slate-200 dark:border-zinc-700 shadow-2xs transition-all cursor-pointer"
                       title="Metinden Yeni Dersler Ekle"
                     >
                       <ClipboardPaste className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => setIsAutoScheduleModalOpen(true)}
-                      className="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-sm transition-all cursor-pointer"
+                      className="px-3 py-1.5 text-xs font-bold bg-accent-600 hover:bg-accent-500 text-white rounded-lg shadow-sm transition-all cursor-pointer"
                     >
                       Sihirbaz
                     </button>
@@ -1135,7 +1303,7 @@ function App() {
                   <div className="flex items-center justify-center gap-2 mt-3">
                     <button
                       onClick={() => setMobileTab('all')}
-                      className="px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg hover:bg-indigo-100 transition-colors cursor-pointer"
+                      className="px-3 py-1.5 text-xs font-bold text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-950/60 rounded-lg hover:bg-accent-100 transition-colors cursor-pointer"
                     >
                       Tüm Dersler →
                     </button>
@@ -1206,7 +1374,7 @@ function App() {
             onClick={() => setMobileTab('schedule')}
             className={`transition-all duration-200 cursor-pointer flex items-center justify-center ${
               mobileTab === 'schedule'
-                ? 'w-16 h-10 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/35 active:scale-95'
+                ? 'w-16 h-10 rounded-full bg-accent-600 text-white shadow-lg shadow-accent-600/35 active:scale-95'
                 : 'w-11 h-10 rounded-full text-zinc-500 hover:text-zinc-300 active:scale-90'
             }`}
             title="Ders Programı Takvimi"
@@ -1220,7 +1388,7 @@ function App() {
             onClick={() => setMobileTab('all')}
             className={`transition-all duration-200 cursor-pointer flex items-center justify-center relative ${
               mobileTab === 'all'
-                ? 'w-16 h-10 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/35 active:scale-95'
+                ? 'w-16 h-10 rounded-full bg-accent-600 text-white shadow-lg shadow-accent-600/35 active:scale-95'
                 : 'w-11 h-10 rounded-full text-zinc-500 hover:text-zinc-300 active:scale-90'
             }`}
             title="Tüm Dersler"
@@ -1237,7 +1405,7 @@ function App() {
             onClick={() => setMobileTab('eligible')}
             className={`transition-all duration-200 cursor-pointer flex items-center justify-center relative ${
               mobileTab === 'eligible'
-                ? 'w-16 h-10 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/35 active:scale-95'
+                ? 'w-16 h-10 rounded-full bg-accent-600 text-white shadow-lg shadow-accent-600/35 active:scale-95'
                 : 'w-11 h-10 rounded-full text-zinc-500 hover:text-zinc-300 active:scale-90'
             }`}
             title="Uygun Dersler"
@@ -1254,7 +1422,7 @@ function App() {
             onClick={() => setMobileTab('selected')}
             className={`transition-all duration-200 cursor-pointer flex items-center justify-center relative ${
               mobileTab === 'selected'
-                ? 'w-16 h-10 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/35 active:scale-95'
+                ? 'w-16 h-10 rounded-full bg-accent-600 text-white shadow-lg shadow-accent-600/35 active:scale-95'
                 : 'w-11 h-10 rounded-full text-zinc-500 hover:text-zinc-300 active:scale-90'
             }`}
             title="Seçilen Dersler"
@@ -1265,7 +1433,7 @@ function App() {
               conflicts.length > 0 ? (
                 <span className="w-2 h-2 rounded-full bg-red-500 absolute top-1.5 right-2 animate-pulse" />
               ) : selectedCount > 0 ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 absolute top-2 right-2.5" />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-400 absolute top-2 right-2.5" />
               ) : null
             )}
           </button>
@@ -1275,7 +1443,7 @@ function App() {
             onClick={() => setMobileTab('tags')}
             className={`transition-all duration-200 cursor-pointer flex items-center justify-center relative ${
               mobileTab === 'tags'
-                ? 'w-16 h-10 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/35 active:scale-95'
+                ? 'w-16 h-10 rounded-full bg-accent-600 text-white shadow-lg shadow-accent-600/35 active:scale-95'
                 : 'w-11 h-10 rounded-full text-zinc-500 hover:text-zinc-300 active:scale-90'
             }`}
             title="Etiketler"

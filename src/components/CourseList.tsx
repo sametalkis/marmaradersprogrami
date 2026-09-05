@@ -107,13 +107,13 @@ export const CourseList = ({
                 placeholder="Ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-accent-500 outline-none"
               />
             </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'code' | 'name' | 'instructor')}
-              className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-accent-500 outline-none"
             >
               <option value="code">Kod</option>
               <option value="name">Ad</option>

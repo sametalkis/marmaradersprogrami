@@ -129,7 +129,7 @@ export const ScheduleStats: React.FC<{ courses: Course[] }> = ({ courses }) => {
         aria-label="Haftalık istatistik panelini aç/kapat"
       >
         <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-zinc-100">
-          <span className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+          <span className="p-1.5 rounded-lg bg-accent-100 dark:bg-accent-950/60 text-accent-600 dark:text-accent-400">
             <BarChart3 className="h-4 w-4" />
           </span>
           Haftalık İstatistikler
@@ -175,8 +175,8 @@ export const ScheduleStats: React.FC<{ courses: Course[] }> = ({ courses }) => {
                 return (
                   <div key={day} className="flex-1 flex flex-col items-center justify-end h-full min-w-0">
                     <div
-                      className={`w-full max-w-[36px] rounded-t-md bg-indigo-500 transition-all duration-300 ${
-                        minutes === 0 ? 'bg-slate-200 dark:bg-zinc-800' : 'bg-indigo-500'
+                      className={`w-full max-w-[36px] rounded-t-md bg-accent-500 transition-all duration-300 ${
+                        minutes === 0 ? 'bg-slate-200 dark:bg-zinc-800' : 'bg-accent-500'
                       }`}
                       style={{ height: `${minutes === 0 ? 2 : Math.max(heightPercent, 4)}%` }}
                       title={`${day}: ${formatDuration(minutes)}`}

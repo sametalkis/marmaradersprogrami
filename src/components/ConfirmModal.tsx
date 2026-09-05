@@ -53,11 +53,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {/* Eklenecek ders */}
             <div className="mb-4">
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Eklemek istediğiniz ders:</p>
-              <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/40 rounded-xl p-4">
-                <div className="font-bold text-indigo-800 dark:text-indigo-300 text-lg">{course.courseCode}</div>
-                <div className="text-indigo-700 dark:text-indigo-400">{course.courseName}</div>
-                <div className="text-indigo-600 dark:text-indigo-400 text-sm mt-1">{course.instructor}</div>
-                <div className="text-indigo-500 dark:text-indigo-300 text-xs mt-2 font-mono">{course.dayTimeLocation}</div>
+              <div className="bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-800/40 rounded-xl p-4">
+                <div className="font-bold text-accent-800 dark:text-accent-300 text-lg">{course.courseCode}</div>
+                <div className="text-accent-700 dark:text-accent-400">{course.courseName}</div>
+                <div className="text-accent-600 dark:text-accent-400 text-sm mt-1">{course.instructor}</div>
+                <div className="text-accent-500 dark:text-accent-300 text-xs mt-2 font-mono">{course.dayTimeLocation}</div>
               </div>
             </div>
 

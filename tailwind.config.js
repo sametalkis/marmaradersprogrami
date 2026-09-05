@@ -12,7 +12,21 @@ module.exports = {
           blue: '#1e40af',
           lightblue: '#3b82f6',
           red: '#dc2626'
-        }
+        },
+        // Vurgu rengi: index.css'teki [data-accent] bloklarından gelir.
+        // <html data-accent="..."> tüm accent-* sınıflarını anında değiştirir.
+        accent: {
+          DEFAULT: ({ opacityValue }) =>
+            opacityValue
+              ? `rgb(var(--accent-500) / ${opacityValue})`
+              : 'rgb(var(--accent-500))',
+          ...Object.fromEntries(
+            [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((s) => [
+              s,
+              `rgb(var(--accent-${s}) / <alpha-value>)`,
+            ])
+          ),
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

@@ -78,7 +78,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
         className={`
           relative group border-2 border-dashed rounded-3xl p-10 text-center transition-all duration-200
           ${isDragOver
-            ? 'border-indigo-500 bg-indigo-500/10 shadow-xl shadow-indigo-500/10'
+            ? 'border-accent-500 bg-accent-500/10 shadow-xl shadow-accent-500/10'
             : 'border-slate-300 bg-white/60 dark:border-slate-800 dark:bg-slate-900/60 backdrop-blur-xl hover:border-slate-400 dark:hover:border-slate-700 shadow-xl shadow-slate-900/5 dark:shadow-2xl dark:shadow-black/40'}
           ${isLoading ? 'opacity-50 pointer-events-none' : ''}
         `}
@@ -88,11 +88,11 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
       >
         <div className="flex flex-col items-center space-y-4">
           {isLoading ? (
-            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
-              <div className="animate-spin rounded-full h-10 w-10 border-2 border-indigo-500/30 border-t-indigo-400" />
+            <div className="p-4 bg-accent-500/10 border border-accent-500/20 rounded-2xl">
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-accent-500/30 border-t-accent-400" />
             </div>
           ) : (
-            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-400 group-hover:scale-110 group-hover:border-indigo-500/40 transition-all">
+            <div className="p-4 bg-accent-500/10 border border-accent-500/20 rounded-2xl text-accent-400 group-hover:scale-110 group-hover:border-accent-500/40 transition-all">
               <FileSpreadsheet className="h-10 w-10" />
             </div>
           )}
@@ -115,7 +115,7 @@ export const ExcelUploader: React.FC<ExcelUploaderProps> = ({ onDataLoaded }) =>
             />
             <label
               htmlFor="excel-upload"
-              className="inline-flex items-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-medium rounded-xl shadow-md shadow-indigo-600/30 cursor-pointer transition-all gap-2"
+              className="inline-flex items-center px-5 py-2.5 bg-accent-600 hover:bg-accent-500 active:scale-[0.98] text-white font-medium rounded-xl shadow-md shadow-accent-600/30 cursor-pointer transition-all gap-2"
             >
               <Upload className="h-4 w-4" />
               Dosya Seç

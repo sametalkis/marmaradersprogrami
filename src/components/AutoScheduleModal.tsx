@@ -463,10 +463,10 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                <div className="bg-accent-50 dark:bg-accent-950/40 border border-accent-200 dark:border-accent-800/50 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-accent-700 dark:text-accent-300">
                     <strong>{totalUnique}</strong> farklı ders bulundu ({totalTagged} section). 
-                    <span className="block mt-1 text-indigo-600 dark:text-indigo-400">
+                    <span className="block mt-1 text-accent-600 dark:text-accent-400">
                       Not: Aynı dersin farklı section'larından (örn: XXX.1, XXX.2) sadece biri seçilir.
                     </span>
                   </p>
@@ -783,11 +783,11 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50 dark:bg-zinc-900/60 rounded-xl p-3 sm:p-4 border border-slate-200/60 dark:border-zinc-800/60">
                       <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-600 dark:text-zinc-300">
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+                          <Calendar className="h-4 w-4 text-accent-500 flex-shrink-0" />
                           <span className="font-semibold">{currentSuggestion.summary.totalCourses} ders</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Clock className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+                          <Clock className="h-4 w-4 text-accent-500 flex-shrink-0" />
                           <span className="font-semibold font-mono">{currentSuggestion.summary.earliestStart} - {currentSuggestion.summary.latestEnd}</span>
                         </div>
                       </div>
@@ -844,7 +844,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                           aria-label={`Öneri ${idx + 1}`}
                           className={`w-2 h-2 rounded-full transition-colors ${
                             idx === currentIndex 
-                              ? 'bg-indigo-600' 
+                              ? 'bg-accent-600' 
                               : 'bg-slate-300 dark:bg-zinc-700 hover:bg-slate-400 dark:hover:bg-zinc-600'
                           }`}
                         />
@@ -867,7 +867,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                   <button
                     onClick={handleGenerate}
                     disabled={totalRequired === 0 || isGenerating}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md shadow-indigo-600/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-accent-600 hover:bg-accent-500 text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md shadow-accent-600/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isGenerating ? (
                       <>
@@ -907,7 +907,7 @@ export const AutoScheduleModal: React.FC<AutoScheduleModalProps> = ({
                       type="button"
                       onClick={handleApplyNewScenario}
                       disabled={suggestions.length === 0}
-                      className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 bg-accent-50 dark:bg-accent-950/60 hover:bg-accent-100 dark:hover:bg-accent-900/60 text-accent-700 dark:text-accent-300 border border-accent-200/80 dark:border-accent-800/80 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 cursor-pointer"
                       title="Mevcut taslağı bozmadan yeni bir taslağa kaydet"
                     >
                       <Plus className="h-4 w-4" />

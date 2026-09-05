@@ -62,7 +62,7 @@ export const IcsExportModal: React.FC<IcsExportModalProps> = ({
           <div className="bg-slate-900 rounded-t-2xl px-6 py-4 border-b border-slate-800">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
+                <div className="p-2.5 bg-accent-500/10 border border-accent-500/20 rounded-xl text-accent-400">
                   <Calendar className="h-5 w-5" />
                 </div>
                 <h3 id="ics-export-modal-title" className="text-xl font-bold text-white tracking-tight">Takvime Aktar (.ics)</h3>
@@ -92,7 +92,7 @@ export const IcsExportModal: React.FC<IcsExportModalProps> = ({
                 type="date"
                 value={semesterStart}
                 onChange={(e) => setSemesterStart(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 text-slate-800 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500 transition-colors cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 text-slate-800 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500/60 focus:border-accent-500 transition-colors cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
               />
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
                 Etkinlikler bu haftadan itibaren tekrar eder.
@@ -111,7 +111,7 @@ export const IcsExportModal: React.FC<IcsExportModalProps> = ({
                 max={30}
                 value={weekCount}
                 onChange={(e) => setWeekCount(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 text-slate-800 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500 transition-colors"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-800 text-slate-800 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500/60 focus:border-accent-500 transition-colors"
               />
               <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1">
                 1-30 arası bir değer girin (varsayılan 14 hafta).
@@ -146,7 +146,7 @@ export const IcsExportModal: React.FC<IcsExportModalProps> = ({
             </button>
             <button
               onClick={handleConfirm}
-              className="px-5 py-2.5 text-white bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] rounded-xl font-medium transition-all flex items-center gap-2 shadow-sm shadow-indigo-600/25 cursor-pointer"
+              className="px-5 py-2.5 text-white bg-accent-600 hover:bg-accent-500 active:scale-[0.98] rounded-xl font-medium transition-all flex items-center gap-2 shadow-sm shadow-accent-600/25 cursor-pointer"
             >
               <Download className="h-4 w-4" />
               Dışa Aktar

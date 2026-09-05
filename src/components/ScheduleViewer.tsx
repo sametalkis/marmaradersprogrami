@@ -255,9 +255,9 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
           <div className="flex items-center gap-3 flex-wrap">
             {/* Dikey / Yatay Smooth Sliding Geçiş Butonları (PDF çıktısında ve mobilde gizlenir) */}
             <div data-html2canvas-ignore="true" className="relative hidden sm:flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 shadow-inner select-none min-w-[170px]" role="radiogroup" aria-label="Görünüm modu">
-              {/* Animasyonlu indigo arka plan kaydırıcısı */}
+              {/* Animasyonlu vurgu rengi arka plan kaydırıcısı */}
               <div
-                className="absolute top-1 bottom-1 bg-indigo-600 rounded-lg transition-all duration-300 ease-out shadow-sm pointer-events-none"
+                className="absolute top-1 bottom-1 bg-accent-600 rounded-lg transition-all duration-300 ease-out shadow-sm pointer-events-none"
                 style={{
                   left: viewMode === 'vertical' ? '4px' : 'calc(50% + 2px)',
                   width: 'calc(50% - 6px)'
@@ -307,7 +307,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
           {/* Çipler çoksa yatay kaydırma; "Taslaklar:" etiketi ve "Yeni Taslak" sabit kalır */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none min-w-0 scroll-smooth">
             <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mr-1 flex items-center gap-1 flex-shrink-0">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+              <Sparkles className="h-3.5 w-3.5 text-accent-500" />
               Taslaklar:
             </span>
             {scenarios.map((sc) => {
@@ -325,7 +325,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                     }
                     setEditingScenarioId(null);
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-white dark:bg-zinc-900 rounded-xl border-2 border-indigo-500 shadow-md ring-2 ring-indigo-500/20 flex-shrink-0"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-white dark:bg-zinc-900 rounded-xl border-2 border-accent-500 shadow-md ring-2 ring-accent-500/20 flex-shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <input
@@ -374,7 +374,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                 }}
                 className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer select-none flex-shrink-0 ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                    ? 'bg-accent-600 text-white shadow-sm shadow-accent-600/30'
                     : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/80'
                 }`}
                 title="Tıklayarak geç, çift tıklayarak veya kalem simgesine basarak ismini değiştir"
@@ -391,7 +391,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                   }}
                   className={`p-1 rounded-md transition-all cursor-pointer ${
                     isActive
-                      ? 'text-indigo-200 hover:text-white hover:bg-indigo-700'
+                      ? 'text-accent-200 hover:text-white hover:bg-accent-700'
                       : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 opacity-60 group-hover:opacity-100'
                   }`}
                   title="Taslak İsmini Değiştir"
@@ -401,7 +401,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
 
                 <span className={
                   isActive 
-                    ? "text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-indigo-700 text-white" 
+                    ? "text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-accent-700 text-white" 
                     : "text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400"
                 }>
                   {sc.courseIds.length}
@@ -416,7 +416,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                     }}
                     className={`ml-0.5 p-1 rounded-md transition-all cursor-pointer ${
                       isActive
-                        ? 'text-indigo-200 hover:text-red-300 hover:bg-indigo-700'
+                        ? 'text-accent-200 hover:text-red-300 hover:bg-accent-700'
                         : 'text-slate-400 hover:text-red-400 hover:bg-slate-100 dark:hover:bg-zinc-800 opacity-60 group-hover:opacity-100'
                     }`}
                     title="Taslağı Sil"
@@ -430,7 +430,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
           </div>
           <button
             onClick={() => onAddScenario?.()}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-dashed border-indigo-300 dark:border-indigo-700 transition-colors flex-shrink-0"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-950/40 hover:bg-accent-100 dark:hover:bg-accent-900/50 border border-dashed border-accent-300 dark:border-accent-700 transition-colors flex-shrink-0"
             title="Yeni Boş Taslak Oluştur"
           >
             <Plus className="h-3 w-3" />
@@ -469,7 +469,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                 onClick={() => setSelectedMobileDay(day)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-2 ring-indigo-500/50'
+                    ? 'bg-accent-600 text-white shadow-md shadow-accent-600/30 ring-2 ring-accent-500/50'
                     : count > 0
                     ? 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50'
                     : 'bg-slate-100/70 dark:bg-zinc-900/40 text-slate-400 dark:text-zinc-500 border border-transparent'
@@ -478,7 +478,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                 <span>{day.slice(0, 3)}</span>
                 {count > 0 && (
                   isSelected ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-black bg-indigo-900 text-white">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-black bg-accent-900 text-white">
                       {count}
                     </span>
                   ) : (
@@ -495,7 +495,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
             onClick={() => setSelectedMobileDay('all')}
             className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
               selectedMobileDay === 'all'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-2 ring-indigo-500/50'
+                ? 'bg-accent-600 text-white shadow-md shadow-accent-600/30 ring-2 ring-accent-500/50'
                 : 'bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 hover:bg-slate-200/60'
             }`}
           >
@@ -722,7 +722,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                               className={`absolute z-35 rounded-xl p-2.5 border-2 border-dashed transition-all duration-150 cursor-pointer pointer-events-auto shadow-xl backdrop-blur-xs flex flex-col justify-between overflow-hidden select-none ${
                                 gh.hasConflict
                                   ? 'border-red-500 bg-red-500/20 text-red-800 dark:text-red-200 ring-2 ring-red-500/40'
-                                  : 'border-indigo-500 bg-indigo-500/20 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 ring-2 ring-indigo-500/30'
+                                  : 'border-accent-500 bg-accent-500/20 dark:bg-accent-950/60 text-accent-900 dark:text-accent-200 ring-2 ring-accent-500/30'
                               }`}
                               style={{
                                 top: `calc(${gStyle.top} + 2px)`,
@@ -920,7 +920,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                               className={`absolute z-35 rounded-xl p-2 border-2 border-dashed transition-all duration-150 cursor-pointer pointer-events-auto shadow-xl backdrop-blur-xs flex flex-col justify-between overflow-hidden select-none ${
                                 gh.hasConflict
                                   ? 'border-red-500 bg-red-500/20 text-red-800 dark:text-red-200 ring-2 ring-red-500/40'
-                                  : 'border-indigo-500 bg-indigo-500/20 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 ring-2 ring-indigo-500/30'
+                                  : 'border-accent-500 bg-accent-500/20 dark:bg-accent-950/60 text-accent-900 dark:text-accent-200 ring-2 ring-accent-500/30'
                               }`}
                               style={{
                                 left: `calc(${gStyle.left} + 2px)`,
@@ -1112,7 +1112,7 @@ export const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
                   <span className="font-extrabold text-xs text-slate-800 dark:text-zinc-100">
                     {selectedConflictCourse.courseCode} - {selectedConflictCourse.courseName}
                   </span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-accent-100 dark:bg-accent-950 text-accent-700 dark:text-accent-300">
                     Seçili
                   </span>
                 </div>

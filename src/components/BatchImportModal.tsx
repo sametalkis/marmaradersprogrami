@@ -117,7 +117,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
           <div className="bg-slate-900 px-4 sm:px-6 py-4 border-b border-slate-800 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+                <div className="p-2 bg-accent-500/20 text-accent-400 rounded-xl border border-accent-500/30">
                   <ClipboardPaste className="h-5 w-5" />
                 </div>
                 <div>
@@ -149,7 +149,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setInputText(SAMPLE_TEXT)}
-                    className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-bold text-accent-600 dark:text-accent-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Sparkles className="h-3 w-3" />
                     Örnek Doldur
@@ -171,7 +171,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
                 value={inputText}
                 onChange={e => setInputText(e.target.value)}
                 placeholder="Örn: ACC3041 Cost Accounting 5 ECTS, MIS3021 Management Information Systems, PROD3001..."
-                className="w-full h-32 sm:h-36 p-3 text-xs sm:text-sm font-mono border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-600"
+                className="w-full h-32 sm:h-36 p-3 text-xs sm:text-sm font-mono border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-zinc-100 rounded-xl focus:ring-2 focus:ring-accent-500 outline-none resize-none transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-600"
               />
             </div>
 
@@ -226,12 +226,12 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
                             onClick={() => toggleCodeSelection(item.normalizedCode)}
                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
                               !isExcluded
-                                ? 'bg-indigo-50 dark:bg-indigo-950/70 border-indigo-300 dark:border-indigo-700/80 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                                ? 'bg-accent-50 dark:bg-accent-950/70 border-accent-300 dark:border-accent-700/80 text-accent-700 dark:text-accent-300 shadow-sm'
                                 : 'bg-slate-100 dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-slate-400 dark:text-zinc-500 line-through opacity-60'
                             }`}
                             title={firstMatch ? `${firstMatch.courseName} (${item.matchedCourses.length} section)` : item.normalizedCode}
                           >
-                            <CheckCircle2 className={`h-3 w-3 ${!isExcluded ? 'text-indigo-600 dark:text-indigo-400' : 'opacity-0'}`} />
+                            <CheckCircle2 className={`h-3 w-3 ${!isExcluded ? 'text-accent-600 dark:text-accent-400' : 'opacity-0'}`} />
                             <span>{item.normalizedCode}</span>
                             <span className="text-[10px] font-normal opacity-70">
                               ({item.matchedCourses.length} sec)
@@ -276,7 +276,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
             ) : (
               /* Boş Durum Bilgilendirme Kartı */
               <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/30 flex items-start gap-3">
-                <BookOpen className="h-5 w-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                <BookOpen className="h-5 w-5 text-accent-500 flex-shrink-0 mt-0.5" />
                 <div className="text-xs space-y-1 text-slate-600 dark:text-zinc-400">
                   <p className="font-bold text-slate-800 dark:text-zinc-200">Nasıl Çalışır?</p>
                   <p>
@@ -314,7 +314,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
                       onClick={() => setSelectedTag(tag)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                         selectedTag === tag
-                          ? 'bg-indigo-600 text-white border-transparent shadow-md shadow-indigo-600/30 scale-100'
+                          ? 'bg-accent-600 text-white border-transparent shadow-md shadow-accent-600/30 scale-100'
                           : 'bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-800'
                       }`}
                     >
@@ -332,7 +332,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
                         onClick={() => setSelectedTag(cTag.id)}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                           selectedTag === cTag.id
-                            ? 'bg-indigo-600 text-white border-transparent shadow-md shadow-indigo-600/30'
+                            ? 'bg-accent-600 text-white border-transparent shadow-md shadow-accent-600/30'
                             : `${colorStyle?.light || 'bg-slate-100 dark:bg-zinc-900'} ${colorStyle?.text || 'text-slate-700 dark:text-zinc-300'} border-slate-200 dark:border-zinc-800`
                         }`}
                       >
@@ -361,7 +361,7 @@ export const BatchImportModal: React.FC<BatchImportModalProps> = ({
               type="button"
               onClick={handleApply}
               disabled={finalCourseIdsToAdd.length === 0}
-              className="flex-1 sm:flex-initial px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-black rounded-xl shadow-lg shadow-indigo-600/30 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-initial px-5 py-2.5 bg-accent-600 hover:bg-accent-500 text-white text-xs sm:text-sm font-black rounded-xl shadow-lg shadow-accent-600/30 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               <Check className="h-4 w-4" />
               <span>

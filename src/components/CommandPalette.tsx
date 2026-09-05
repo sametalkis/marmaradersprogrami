@@ -117,7 +117,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       >
         {/* Arama Input Satırı */}
         <div className="flex items-center px-4 py-3.5 border-b border-slate-200 dark:border-zinc-800/80 gap-3">
-          <Search className="h-5 w-5 text-indigo-500 flex-shrink-0" />
+          <Search className="h-5 w-5 text-accent-500 flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -161,14 +161,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
                     isHighlighted
-                      ? 'bg-indigo-50 dark:bg-zinc-900 border border-indigo-200 dark:border-indigo-500/40 shadow-xs'
+                      ? 'bg-accent-50 dark:bg-zinc-900 border border-accent-200 dark:border-accent-500/40 shadow-xs'
                       : 'hover:bg-slate-50 dark:hover:bg-zinc-900/50 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
                     <div className={`p-2 rounded-xl flex-shrink-0 ${
                       course.isSelected
-                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                        ? 'bg-accent-600 text-white shadow-sm shadow-accent-600/30'
                         : 'bg-slate-100 dark:bg-zinc-900 text-slate-500 dark:text-zinc-400'
                     }`}>
                       <BookOpen className="h-4 w-4" />
@@ -219,7 +219,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     {/* Durum Rozeti */}
                     {course.isSelected ? (
-                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300">
+                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-accent-100 dark:bg-accent-950/80 text-accent-700 dark:text-accent-300">
                         Seçili
                       </span>
                     ) : course.isEligible ? (
@@ -251,7 +251,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         <button
                           type="button"
                           onClick={() => onToggleSelect(course)}
-                          className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-950/50 rounded-lg transition-colors cursor-pointer"
                           title="Programa Ekle (Takvime Seç)"
                         >
                           <Plus className="h-4 w-4" />
@@ -275,7 +275,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         onClick={() => setTagDropdownCourseId(tagDropdownCourseId === course.id ? null : course.id)}
                         className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                           course.tag
-                            ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-zinc-800'
+                            ? 'text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-zinc-800'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800'
                         }`}
                         title="Etiket Ata / Değiştir"
@@ -302,7 +302,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                                 }}
                                 className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
                                   course.tag === tag
-                                    ? 'bg-indigo-50 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-300 font-bold'
+                                    ? 'bg-accent-50 dark:bg-zinc-800 text-accent-600 dark:text-accent-300 font-bold'
                                     : 'hover:bg-slate-100 dark:hover:bg-zinc-800/80 text-slate-700 dark:text-zinc-300'
                                 }`}
                               >
@@ -331,7 +331,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                                     }}
                                     className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
                                       course.tag === tag.id
-                                        ? 'bg-indigo-50 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-300 font-bold'
+                                        ? 'bg-accent-50 dark:bg-zinc-800 text-accent-600 dark:text-accent-300 font-bold'
                                         : 'hover:bg-slate-100 dark:hover:bg-zinc-800/80 text-slate-700 dark:text-zinc-300'
                                     }`}
                                   >
